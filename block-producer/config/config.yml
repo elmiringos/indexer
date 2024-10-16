@@ -1,0 +1,17 @@
+app:
+  name: "go-backend-template"
+  version: "0.0.1"
+  stage: "dev"
+
+http:
+  port: "8080"
+
+logger:
+  file: "app.log"
+
+rabbitmq:
+  rpc_server_exchange: "rpc_server"
+  rpc_client_exchange: "rpc_client"
+
+eth_node:
+  network_type: "sepolia"
