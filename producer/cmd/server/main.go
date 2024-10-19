@@ -6,8 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/elmiringos/indexer/block-producer/config"
-	"github.com/elmiringos/indexer/block-producer/pkg/logger"
+	"github.com/elmiringos/indexer/producer/config"
+	"github.com/elmiringos/indexer/producer/internal/blockchain"
+	"github.com/elmiringos/indexer/producer/internal/server"
+	"github.com/elmiringos/indexer/producer/pkg/logger"
+	"github.com/elmiringos/indexer/producer/pkg/rabbitmq"
 
 	"go.uber.org/zap"
 )
@@ -24,6 +27,12 @@ func main() {
 			log.Fatal("failed to sync logger", zap.Error(err))
 		}
 	}()
+
+	blockchainProcessor := blockchain.NewBlockchainProcessor(cfg)
+	publisher := rabbitmq.NewPublisher(cfg.RMQ.URL)
+
+	server := server.NewServer(blockchainProcessor, publisher, cfg)
+	server.StartBlochainDataConsuming()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

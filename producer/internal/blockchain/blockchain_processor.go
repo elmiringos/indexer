@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/elmiringos/indexer/block-producer/config"
-	"github.com/elmiringos/indexer/block-producer/pkg/logger"
+	"github.com/elmiringos/indexer/producer/config"
+	"github.com/elmiringos/indexer/producer/pkg/logger"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -30,16 +30,16 @@ func basicAuth(username, password string) string {
 }
 
 // NewBlockchainProcessor initializes BlockchainProcessor with HTTP and WebSocket clients
-func NewBlockchainProcessor(cfg *config.Config) (*BlockchainProcessor, error) {
+func NewBlockchainProcessor(cfg *config.Config) *BlockchainProcessor {
 	// Create both HTTP and WebSocket clients
 	httpClient, err := createRPCClient(cfg.EthNode.HttpURL, cfg.EthNode.ApiKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %v", err)
+		panic(fmt.Errorf("failed to create HTTP client: %v", err))
 	}
 
 	wsClient, err := createRPCClient(cfg.EthNode.WsURL, cfg.EthNode.ApiKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create WebSocket client: %v", err)
+		panic(fmt.Errorf("failed to create WebSocket client: %v", err))
 	}
 
 	// Initialize the BlockchainProcessor struct
@@ -51,7 +51,7 @@ func NewBlockchainProcessor(cfg *config.Config) (*BlockchainProcessor, error) {
 		log:           logger.GetLogger(),
 	}
 
-	return blockchainProcessor, nil
+	return blockchainProcessor
 }
 
 // createRPCClient is a helper function to create an RPC client with authentication
@@ -87,7 +87,15 @@ func (p *BlockchainProcessor) CloseClients() {
 	}
 }
 
-func (p *BlockchainProcessor) ListenNewBlocks(startBlockNumber int) {
+func (p *BlockchainProcessor) GetBlockByNumber(ctx context.Context, blockNumber *big.Int) (*types.Block, error) {
+	block, err := p.ethHttpClient.BlockByNumber(ctx, blockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("Error in aggragating block %v: %v", blockNumber, err)
+	}
+	return block, nil
+}
+
+func (p *BlockchainProcessor) ListenNewBlocks(startBlockNumber int, blocks chan<- *types.Block) {
 	headers := make(chan *types.Header)
 	sub, err := p.ethWSClient.SubscribeNewHead(context.Background(), headers)
 	if err != nil {
@@ -106,19 +114,9 @@ func (p *BlockchainProcessor) ListenNewBlocks(startBlockNumber int) {
 				if err != nil {
 					p.log.Fatal("Failed to get block by hash", zap.Error(err))
 				}
-
-				fmt.Printf("Block number: %d\n", block.Number().Uint64())
-				fmt.Printf("Block hash: %s\n", block.Hash().Hex())
-				fmt.Printf("Number of transactions: %d\n", len(block.Transactions()))
+				blocks <- block
+				p.log.Debug("Successfuly get block and send to blocks channel", zap.Any("block", block))
 			}
 		}
 	}
-}
-
-func (p *BlockchainProcessor) GetBlockByNumber(ctx context.Context, blockNumber *big.Int) error {
-	_, err := p.ethHttpClient.BlockByNumber(ctx, blockNumber)
-	if err != nil {
-		return fmt.Errorf("Error in aggragating block %v: %v", blockNumber, err)
-	}
-	return nil
 }

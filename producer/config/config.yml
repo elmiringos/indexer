@@ -1,7 +1,8 @@
-app:
-  name: "go-backend-template"
+server:
+  name: "block-producer"
   version: "0.0.1"
   stage: "dev"
+  woker_count: 5
 
 http:
   port: "8080"

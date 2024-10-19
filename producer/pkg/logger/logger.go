@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/elmiringos/indexer/block-producer/config"
+	"github.com/elmiringos/indexer/producer/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -25,7 +25,7 @@ func GetLogger() *zap.Logger {
 func New(cfg *config.Config) *zap.Logger {
 	var core zapcore.Core
 
-	encoder, level := createEncoder(cfg.App.Stage)
+	encoder, level := createEncoder(cfg.Server.Stage)
 	writeSyncer := createWriteSyncer(cfg)
 	core = zapcore.NewCore(
 		encoder,

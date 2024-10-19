@@ -1,4 +1,4 @@
-module github.com/elmiringos/indexer/block-producer
+module github.com/elmiringos/indexer/producer
 
 go 1.22.0
 

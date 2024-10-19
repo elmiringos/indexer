@@ -9,7 +9,7 @@ import (
 
 type (
 	Config struct {
-		App    `yaml:"app"`
+		Server `yaml:"server"`
 		HTTP   `yaml:"http"`
 		Logger `yaml:"logger"`
 		Redis
@@ -17,10 +17,11 @@ type (
 		RMQ
 	}
 
-	App struct {
-		Name    string `env-required:"true" yaml:"name"    env:"APP_NAME"`
-		Version string `env-required:"true" yaml:"version" env:"APP_VERSION"`
-		Stage   string `env-required:"true" yaml:"stage"   env:"APP_STAGE"`
+	Server struct {
+		Name        string `yaml:"name"`
+		Version     string `yaml:"version"`
+		Stage       string `yaml:"stage"`
+		WorkerCount int    `yaml:"stage"`
 	}
 
 	HTTP struct {
@@ -44,7 +45,7 @@ type (
 	EthNode struct {
 		HttpURL string `env-required:"true" env:"ETH_HTTP_NODE_RPC"`
 		WsURL   string `env-required:"true" env:"ETH_WS_NODE_RPC"`
-		ApiKey  string `env-required:"false" env:"ETHN_RPC_KEY"`
+		ApiKey  string `env-required:"true" env:"ETH_RPC_KEY"`
 		Network string `yaml:"network_type"`
 	}
 )
