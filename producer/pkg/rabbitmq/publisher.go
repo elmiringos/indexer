@@ -103,3 +103,13 @@ func (p *Publisher) PublishTransactionMessage(transaction *types.Transaction) er
 
 	return err
 }
+
+func (p *Publisher) CloseConnection() error {
+	err := p.channel.Close()
+	return err
+}
+
+func (p *Publisher) CloseChannel() error {
+	err := p.channel.Close()
+	return err
+}

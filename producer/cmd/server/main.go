@@ -16,6 +16,7 @@ import (
 )
 
 func main() {
+	// config and logger creation
 	cfg, err := loadConfig()
 	if err != nil {
 		panic(fmt.Errorf("error in reading config: %v", err))
@@ -28,11 +29,7 @@ func main() {
 		}
 	}()
 
-	blockchainProcessor := blockchain.NewBlockchainProcessor(cfg)
-	publisher := rabbitmq.NewPublisher(cfg.RMQ.URL)
-
-	server := server.NewServer(blockchainProcessor, publisher, cfg)
-	server.StartBlochainDataConsuming()
+	startProducerService(cfg)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -43,7 +40,18 @@ func main() {
 	log.Info("Server exiting")
 }
 
-// loadConfig loads the configuration and handles errors
+func startProducerService(cfg *config.Config) {
+	blockchainProcessor := blockchain.NewBlockchainProcessor(cfg)
+	defer blockchainProcessor.CloseClients()
+
+	publisher := rabbitmq.NewPublisher(cfg.RMQ.URL)
+	defer publisher.CloseConnection()
+	defer publisher.CloseChannel()
+
+	server := server.NewServer(blockchainProcessor, publisher, cfg)
+	server.StartBlochainDataConsuming()
+}
+
 func loadConfig() (*config.Config, error) {
 	return config.NewDefaultConfig()
 }
