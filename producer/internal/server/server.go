@@ -8,10 +8,10 @@ import (
 	"github.com/elmiringos/indexer/producer/internal/blockchain"
 	"github.com/elmiringos/indexer/producer/pkg/logger"
 	"github.com/elmiringos/indexer/producer/pkg/rabbitmq"
-	"github.com/rabbitmq/amqp091-go"
-	"go.uber.org/zap"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/rabbitmq/amqp091-go"
+	"go.uber.org/zap"
 )
 
 type Server struct {

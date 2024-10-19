@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/elmiringos/indexer/producer/pkg/logger"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	ampq "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
