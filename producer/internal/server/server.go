@@ -55,6 +55,22 @@ func (s *Server) aggregateBlock(block *types.Block) error {
 	return nil
 }
 
+func (s *Server) setupAllQueues() {
+	blockQueue, err := s.publisher.MakeNewQueueAndExchange(rabbitmq.BlockExchange, rabbitmq.BlockRoute, rabbitmq.BlockQuque)
+	if err != nil {
+		panic(fmt.Errorf("Error in setuping block queue, %v", err))
+	}
+
+	transactionQueue, err := s.publisher.MakeNewQueueAndExchange(rabbitmq.TransactionExchange, rabbitmq.TransactionRoute, rabbitmq.TransactionQuque)
+	if err != nil {
+		panic(fmt.Errorf("Error in setuping transaction queue, %v", err))
+	}
+
+	s.quques = make(map[rabbitmq.QuqueType]*amqp091.Queue)
+	s.quques[rabbitmq.BlockQuque] = blockQueue
+	s.quques[rabbitmq.TransactionQuque] = transactionQueue
+}
+
 func (s *Server) worker(id int, blocks <-chan *types.Block, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -70,40 +86,22 @@ func (s *Server) worker(id int, blocks <-chan *types.Block, wg *sync.WaitGroup) 
 	}
 }
 
-func (s *Server) startWorkerPool(numWorkers int) chan<- *types.Block {
-	blocks := make(chan *types.Block, 100)
+func (s *Server) startWorkerPool(numWorkers int, blocks <-chan *types.Block, wg *sync.WaitGroup) {
+	for id := 1; id <= numWorkers; id++ {
+		wg.Add(1)
+		go s.worker(id, blocks, wg)
+	}
+}
+
+func (s *Server) StartBlockchainDataConsuming() {
+	s.setupAllQueues()
+
 	var wg sync.WaitGroup
 
-	for i := 1; i <= numWorkers; i++ {
-		wg.Add(1)
-		go s.worker(i, blocks, &wg)
-	}
+	blocks := s.blockchainProcessor.ListenNewBlocks(0)
 
-	go func() {
-		wg.Wait()
-		close(blocks)
-	}()
+	s.startWorkerPool(s.config.WorkerCount, blocks, &wg)
+	wg.Wait()
 
-	return blocks
-}
-
-func (s *Server) setupAllQueues() {
-	blockQueue, err := s.publisher.MakeNewQueueAndExchange(rabbitmq.BlockExchange, rabbitmq.BlockQuque)
-	if err != nil {
-		panic(fmt.Errorf("Error in setuping block queue, %v", err))
-	}
-
-	transactionQueue, err := s.publisher.MakeNewQueueAndExchange(rabbitmq.TransactionExchange, rabbitmq.BlockQuque)
-	if err != nil {
-		panic(fmt.Errorf("Error in setuping transaction queue, %v", err))
-	}
-
-	s.quques[rabbitmq.BlockQuque] = blockQueue
-	s.quques[rabbitmq.TransactionQuque] = transactionQueue
-}
-
-func (s *Server) StartBlochainDataConsuming() {
-	s.setupAllQueues()
-	blocks := s.startWorkerPool(s.config.WorkerCount)
-	go s.blockchainProcessor.ListenNewBlocks(0, blocks)
+	s.log.Info("Blocks channel is closed, workers have finished processing.")
 }

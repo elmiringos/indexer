@@ -29,7 +29,7 @@ func main() {
 		}
 	}()
 
-	startProducerService(cfg)
+	startProducerService(cfg, log)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -40,16 +40,22 @@ func main() {
 	log.Info("Server exiting")
 }
 
-func startProducerService(cfg *config.Config) {
+func startProducerService(cfg *config.Config, log *zap.Logger) {
 	blockchainProcessor := blockchain.NewBlockchainProcessor(cfg)
 	defer blockchainProcessor.CloseClients()
 
 	publisher := rabbitmq.NewPublisher(cfg.RMQ.URL)
-	defer publisher.CloseConnection()
-	defer publisher.CloseChannel()
+	defer func() {
+		if err := publisher.CloseChannel(); err != nil {
+			log.Error("failed to close RabbitMQ channel", zap.Error(err))
+		}
+		if err := publisher.CloseConnection(); err != nil {
+			log.Error("failed to close RabbitMQ connection", zap.Error(err))
+		}
+	}()
 
 	server := server.NewServer(blockchainProcessor, publisher, cfg)
-	server.StartBlochainDataConsuming()
+	server.StartBlockchainDataConsuming()
 }
 
 func loadConfig() (*config.Config, error) {

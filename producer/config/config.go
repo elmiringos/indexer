@@ -21,7 +21,7 @@ type (
 		Name        string `yaml:"name"`
 		Version     string `yaml:"version"`
 		Stage       string `yaml:"stage"`
-		WorkerCount int    `yaml:"stage"`
+		WorkerCount int    `yaml:"worker_count"`
 	}
 
 	HTTP struct {
@@ -37,15 +37,13 @@ type (
 	}
 
 	RMQ struct {
-		ServerExchange string `env-required:"true" yaml:"rpc_server_exchange" env:"RMQ_RPC_SERVER"`
-		ClientExchange string `env-required:"true" yaml:"rpc_client_exchange" env:"RMQ_RPC_CLIENT"`
-		URL            string `env-required:"true"                            env:"RMQ_URL"`
+		URL string `env-required:"true" env:"RMQ_URL"`
 	}
 
 	EthNode struct {
 		HttpURL string `env-required:"true" env:"ETH_HTTP_NODE_RPC"`
 		WsURL   string `env-required:"true" env:"ETH_WS_NODE_RPC"`
-		ApiKey  string `env-required:"true" env:"ETH_RPC_KEY"`
+		ApiKey  string `env:"ETH_RPC_KEY"`
 		Network string `yaml:"network_type"`
 	}
 )

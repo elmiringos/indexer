@@ -6,9 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - PG_URL=postgresql://admin:secret@db:5432/mydatabase?sslmode=disable
       - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - REDIS_URL=redis://redis:6379
+      - ETH_HTTP_NODE_RPC=https://sepolia.infura.io/v3/98064002908248a0b0d837940d2c647b
+      - ETH_WS_NODE_RPC=wss://sepolia.infura.io/ws/v3/98064002908248a0b0d837940d2c647b
     ports:
       - "8081:8081"
     depends_on:
@@ -22,13 +23,9 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
 
   rabbitmq:
-    container_name: rabbitmq
     image: rabbitmq:3.8.12-management
     ports:
       - 5672:5672
       - 15672:15672
     volumes:
       - ./data/rabbitmq:/var/lib/rabbitmq
-
-volumes:
-  postgres_data:

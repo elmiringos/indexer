@@ -13,8 +13,4 @@ RUN go mod download
 # Copy the source code into the container
 COPY . .
 
-# Install Air for live reloading
-RUN go install github.com/air-verse/air@latest
-
-# Command to run Air with migration
-CMD ["sh", "-c", "air"]
+CMD ["go", "run", "cmd/server/main.go"]

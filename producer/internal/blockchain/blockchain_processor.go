@@ -95,28 +95,38 @@ func (p *BlockchainProcessor) GetBlockByNumber(ctx context.Context, blockNumber 
 	return block, nil
 }
 
-func (p *BlockchainProcessor) ListenNewBlocks(startBlockNumber int, blocks chan<- *types.Block) {
+func (p *BlockchainProcessor) ListenNewBlocks(startBlockNumber int) <-chan *types.Block {
 	headers := make(chan *types.Header)
+	blocks := make(chan *types.Block, 100)
+
 	sub, err := p.ethWSClient.SubscribeNewHead(context.Background(), headers)
 	if err != nil {
 		p.log.Fatal("Failed to subscribe to new blocks", zap.Error(err))
 	}
 
-	startBlockNumberBigInt := big.NewInt(int64(startBlockNumber))
-
-	for {
-		select {
-		case err := <-sub.Err():
-			p.log.Fatal("Error with block subscription", zap.Error(err))
-		case header := <-headers:
-			if header.Number.Cmp(startBlockNumberBigInt) >= 0 {
-				block, err := p.ethWSClient.BlockByHash(context.Background(), header.Hash())
-				if err != nil {
-					p.log.Fatal("Failed to get block by hash", zap.Error(err))
+	go func() {
+		for {
+			select {
+			case err := <-sub.Err():
+				p.log.Error("Error in block subscription", zap.Error(err))
+				return
+			case header, ok := <-headers:
+				if !ok {
+					return
 				}
-				blocks <- block
-				p.log.Debug("Successfuly get block and send to blocks channel", zap.Any("block", block))
+				if header.Number.Cmp(big.NewInt(int64(startBlockNumber))) >= 0 {
+					block, err := p.ethWSClient.BlockByHash(context.Background(), header.Hash())
+					if err != nil {
+						p.log.Error("Failed to get block by hash", zap.Error(err))
+						continue
+					}
+					p.log.Debug("Get block by hash", zap.Any("number", block.Number()))
+					blocks <- block
+					p.log.Debug("Successful send block to blocks channel", zap.Any("number", block.Number()))
+				}
 			}
 		}
-	}
+	}()
+
+	return blocks
 }
