@@ -1,14 +1,16 @@
 server:
   name: "block-producer"
   version: "0.0.1"
-  stage: "prod"
-  worker_count: 5
+  stage: "dev"
+  worker_count: 1
+  block_start_number: 17423949
+  core_service_url: "localhost:9090"
 
 http:
   port: "8080"
 
 logger:
-  file: "app.log"
+  file: "producer"
 
 rabbitmq:
   rpc_server_exchange: "rpc_server"
@@ -16,3 +18,4 @@ rabbitmq:
 
 eth_node:
   network_type: "sepolia"
+  trace_enabled: false

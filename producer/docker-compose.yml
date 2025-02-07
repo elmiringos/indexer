@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RMQ_URL=amqp://guest:guest@rabbitmq/
       - REDIS_URL=redis://redis:6379
       - ETH_HTTP_NODE_RPC=https://sepolia.infura.io/v3/98064002908248a0b0d837940d2c647b
       - ETH_WS_NODE_RPC=wss://sepolia.infura.io/ws/v3/98064002908248a0b0d837940d2c647b
@@ -15,6 +15,9 @@ services:
     depends_on:
       - redis
       - rabbitmq
+    restart: always
+    volumes:
+      - ./logs:/logs
 
   redis:
     image: redis:7

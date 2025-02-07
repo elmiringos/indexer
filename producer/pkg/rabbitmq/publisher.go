@@ -5,15 +5,13 @@ import (
 
 	"github.com/elmiringos/indexer/producer/pkg/logger"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	ampq "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 )
 
 type Publisher struct {
-	conn    *ampq.Connection
-	channel *ampq.Channel
-	log     *zap.Logger
+	conn *ampq.Connection
+	log  *zap.Logger
 }
 
 func NewPublisher(url string) *Publisher {
@@ -24,23 +22,28 @@ func NewPublisher(url string) *Publisher {
 
 	conn, err := ampq.Dial(url)
 	if err != nil {
-		log.Fatal("err in connecting to ampq", zap.Error(err))
-	}
-
-	channel, err := conn.Channel()
-	if err != nil {
-		log.Fatal("err in creating channel to ampq", zap.Error(err))
+		log.Fatal("err in connecting to ampq", zap.Error(err), zap.String("URL", url))
 	}
 
 	return &Publisher{
-		conn:    conn,
-		channel: channel,
-		log:     log,
+		conn: conn,
+		log:  log,
 	}
 }
 
-func (p *Publisher) MakeNewQueueAndExchange(exchange ExchangeName, routingKey RoutingKey, queueType QuqueType) (*ampq.Queue, error) {
-	err := p.channel.ExchangeDeclare(
+func (p *Publisher) CreateChannel() *ampq.Channel {
+	channel, err := p.conn.Channel()
+	if err != nil {
+		p.log.Fatal("err in creating channel to ampq", zap.Error(err))
+	}
+
+	return channel
+}
+
+func (p *Publisher) MakeNewQueueAndExchange(exchange ExchangeName, routingKey RoutingKey, queueType QueueType) (*ampq.Queue, error) {
+	channel := p.CreateChannel()
+
+	err := channel.ExchangeDeclare(
 		string(exchange), // name
 		"direct",         // type
 		false,            // not durable
@@ -53,7 +56,7 @@ func (p *Publisher) MakeNewQueueAndExchange(exchange ExchangeName, routingKey Ro
 		return nil, err
 	}
 
-	queue, err := p.channel.QueueDeclare(
+	queue, err := channel.QueueDeclare(
 		string(queueType), // name
 		false,             // durable
 		false,             // auto-delete
@@ -61,8 +64,11 @@ func (p *Publisher) MakeNewQueueAndExchange(exchange ExchangeName, routingKey Ro
 		false,             // no-wait
 		nil,               // arguments
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	err = p.channel.QueueBind(
+	err = channel.QueueBind(
 		queue.Name,         // name of the queue
 		string(routingKey), // routing key (messages with this key will be routed to this queue)
 		string(exchange),   // name of the exchange
@@ -76,36 +82,15 @@ func (p *Publisher) MakeNewQueueAndExchange(exchange ExchangeName, routingKey Ro
 	return &queue, nil
 }
 
-func (p *Publisher) PublishBlockMessage(block *types.Block) error {
-	body, err := json.Marshal(block.Header())
+func (p *Publisher) PublishMessage(channel *ampq.Channel, exchange ExchangeName, routingKey RoutingKey, message interface{}) error {
+	body, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	// Publish the message to the exchange
-	err = p.channel.Publish(
-		string(BlockExchange), // exchange
-		string(BlockRoute),    // routing key
-		false,                 // mandatory
-		false,                 // immediate
-		ampq.Publishing{
-			ContentType: "application/json",
-			Body:        body,
-		},
-	)
-	return err
-}
-
-func (p *Publisher) PublishTransactionMessage(transaction *types.Transaction) error {
-	body, err := transaction.MarshalJSON()
-	if err != nil {
-		return err
-	}
-
-	// Publish the message to the exchange
-	err = p.channel.Publish(
-		string(TransactionExchange),
-		string(TransactionRoute),
+	err = channel.Publish(
+		string(exchange),
+		string(routingKey),
 		false,
 		false,
 		ampq.Publishing{
@@ -113,16 +98,10 @@ func (p *Publisher) PublishTransactionMessage(transaction *types.Transaction) er
 			Body:        body,
 		},
 	)
-
 	return err
 }
 
 func (p *Publisher) CloseConnection() error {
-	err := p.channel.Close()
-	return err
-}
-
-func (p *Publisher) CloseChannel() error {
-	err := p.channel.Close()
+	err := p.conn.Close()
 	return err
 }

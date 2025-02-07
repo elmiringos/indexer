@@ -9,6 +9,7 @@ import (
 	"github.com/elmiringos/indexer/producer/config"
 	"github.com/elmiringos/indexer/producer/internal/blockchain"
 	"github.com/elmiringos/indexer/producer/internal/server"
+	grpccoreclient "github.com/elmiringos/indexer/producer/pkg/grpc_core_client"
 	"github.com/elmiringos/indexer/producer/pkg/logger"
 	"github.com/elmiringos/indexer/producer/pkg/rabbitmq"
 
@@ -17,7 +18,7 @@ import (
 
 func main() {
 	// config and logger creation
-	cfg, err := loadConfig()
+	cfg, err := config.NewDefaultConfig()
 	if err != nil {
 		panic(fmt.Errorf("error in reading config: %v", err))
 	}
@@ -46,7 +47,7 @@ func startProducerService(cfg *config.Config, log *zap.Logger) {
 
 	publisher := rabbitmq.NewPublisher(cfg.RMQ.URL)
 	defer func() {
-		if err := publisher.CloseChannel(); err != nil {
+		if err := publisher.CloseConnection(); err != nil {
 			log.Error("failed to close RabbitMQ channel", zap.Error(err))
 		}
 		if err := publisher.CloseConnection(); err != nil {
@@ -54,10 +55,26 @@ func startProducerService(cfg *config.Config, log *zap.Logger) {
 		}
 	}()
 
-	server := server.NewServer(blockchainProcessor, publisher, cfg)
-	server.StartBlockchainDataConsuming()
-}
+	coreClient, err := grpccoreclient.NewCoreClient(cfg.Server.CoreServiceUrl)
+	if err != nil {
+		log.Error("failed to create core client", zap.Error(err))
+	}
+	defer coreClient.Close()
 
-func loadConfig() (*config.Config, error) {
-	return config.NewDefaultConfig()
+	// tx, err := blockchainProcessor.GetTransaction("0x0b1498d09e7e28e3b95b2ad313ff132e5b9fb503165672151d210a84e67487f3")
+	// if err != nil {
+	// 	log.Error("failed to get transaction", zap.Error(err))
+	// }
+
+	// fmt.Println(tx)
+
+	// trace, err := blockchainProcessor.GetTransactionTrace(tx)
+	// if err != nil {
+	// 	log.Error("failed to get transaction trace", zap.Error(err))
+	// }
+
+	// fmt.Println(trace)
+
+	server := server.NewServer(blockchainProcessor, publisher, coreClient, cfg)
+	server.StartBlockchainDataConsuming()
 }

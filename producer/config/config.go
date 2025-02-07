@@ -18,10 +18,12 @@ type (
 	}
 
 	Server struct {
-		Name        string `yaml:"name"`
-		Version     string `yaml:"version"`
-		Stage       string `yaml:"stage"`
-		WorkerCount int    `yaml:"worker_count"`
+		Name             string `yaml:"name"`
+		Version          string `yaml:"version"`
+		Stage            string `yaml:"stage"`
+		WorkerCount      int    `yaml:"worker_count"`
+		BlockStartNumber int64  `yaml:"block_start_number"`
+		CoreServiceUrl   string `yaml:"core_service_url"`
 	}
 
 	HTTP struct {
@@ -45,6 +47,7 @@ type (
 		WsURL   string `env-required:"true" env:"ETH_WS_NODE_RPC"`
 		ApiKey  string `env:"ETH_RPC_KEY"`
 		Network string `yaml:"network_type"`
+		Trace   bool   `yaml:"trace_enabled"`
 	}
 )
 
