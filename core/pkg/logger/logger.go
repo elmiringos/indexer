@@ -3,17 +3,13 @@ package logger
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"time"
 
 	"github.com/elmiringos/indexer/indexer-core/config"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-)
-
-const (
-	dirPerm  = 0o755 // Owner: read, write, execute; Group/Others: read, execute
-	filePerm = 0o666 // Read and write permissions for owner, group, and others
 )
 
 var log *zap.Logger
@@ -25,7 +21,7 @@ func GetLogger() *zap.Logger {
 func New(cfg *config.Config) *zap.Logger {
 	var core zapcore.Core
 
-	encoder, level := createEncoder(cfg.App.Stage)
+	encoder, level := createEncoder(cfg.Server.Stage)
 	writeSyncer := createWriteSyncer(cfg)
 	core = zapcore.NewCore(
 		encoder,
@@ -49,32 +45,28 @@ func createEncoder(stage string) (zapcore.Encoder, zapcore.Level) {
 	case "prod":
 		encoderConfig := zap.NewProductionEncoderConfig()
 
-		return zapcore.NewConsoleEncoder(encoderConfig), zap.InfoLevel
+		return zapcore.NewJSONEncoder(encoderConfig), zap.InfoLevel
 	default:
 		fmt.Print("Error in parsing stage, using default encoder for logger")
 
 		encoderConfig := zap.NewProductionEncoderConfig()
 
-		return zapcore.NewConsoleEncoder(encoderConfig), zap.InfoLevel
+		return zapcore.NewJSONEncoder(encoderConfig), zap.InfoLevel
 	}
 }
 
 func createWriteSyncer(cfg *config.Config) zapcore.WriteSyncer {
 	var writeSyncers []zapcore.WriteSyncer
 
-	if cfg.Logger.File != "" {
-		dir := filepath.Dir(cfg.Logger.File)
-		if err := os.MkdirAll(dir, dirPerm); err != nil {
-			fmt.Printf("Error creating log directory: %v\n", err)
-		}
+	filename := cfg.Logger.File + time.Now().Format("2006-01-02_15-04-05") + ".log"
 
-		file, err := os.OpenFile(cfg.Logger.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, filePerm)
-		if err != nil {
-			fmt.Printf("Error opening log file: %v\n", err)
-		} else {
-			writeSyncers = append(writeSyncers, zapcore.AddSync(file))
-		}
-	}
+	writeSyncers = append(writeSyncers, zapcore.AddSync(&lumberjack.Logger{
+		Filename:   filename,
+		MaxSize:    100,
+		MaxAge:     1,
+		MaxBackups: 1,
+		Compress:   true,
+	}))
 
 	// Add console output by default if file output is not set
 	writeSyncers = append(writeSyncers, zapcore.AddSync(os.Stdout))

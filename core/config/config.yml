@@ -1,13 +1,13 @@
-app:
-  name: "go-backend-template"
+server:
+  name: "indexer-core"
   version: "0.0.1"
   stage: "dev"
 
 http:
-  port: "8080"
+  port: "9090"
 
 logger:
-  file: "app.log"
+  file: "indexer-core"
 
 rabbitmq:
   rpc_server_exchange: "rpc_server"

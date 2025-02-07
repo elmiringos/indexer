@@ -1,1 +1,1 @@
-DROP EXTENSION IF EXISTS "uuid-ossp";
+DROP FUNCTION IF EXISTS update_modified_column();

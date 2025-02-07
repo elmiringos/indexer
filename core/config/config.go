@@ -9,7 +9,7 @@ import (
 
 type (
 	Config struct {
-		App    `yaml:"app"`
+		Server `yaml:"server"`
 		HTTP   `yaml:"http"`
 		Logger `yaml:"logger"`
 		PG
@@ -18,7 +18,7 @@ type (
 		RMQ `yaml:"rabbitmq"`
 	}
 
-	App struct {
+	Server struct {
 		Name    string `env-required:"true" yaml:"name"    env:"APP_NAME"`
 		Version string `env-required:"true" yaml:"version" env:"APP_VERSION"`
 		Stage   string `env-required:"true" yaml:"stage"   env:"APP_STAGE"`

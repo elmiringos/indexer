@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option go_package = "../pb";
+
+service CoreService {
+    rpc GetCurrentBlock(GetCurrentBlockRequest) returns (GetCurrentBlockResponse) {}
+    rpc ResetState(ResetStateRequest) returns (ResetStateResponse) {}
+}
+
+message GetCurrentBlockRequest {}
+
+message GetCurrentBlockResponse {
+    int64 block_number = 1;
+    string block_hash = 2;
+}
+
+message ResetStateRequest {}
+
+message ResetStateResponse {
+    bool success = 1;
+}
