@@ -24,9 +24,16 @@ vendor/
 
 # logs
 *.log
+*/logs
 
 # asdf
 *.tool-versions
 
 # data
 **data
+
+# pb files
+**/*.pb.go
+
+# DS_Store
+**/*.DS_Store
