@@ -11,7 +11,7 @@ func MapBlockToCurrentBlockResponse(block *block.Block) *pb.GetCurrentBlockRespo
 	}
 
 	return &pb.GetCurrentBlockResponse{
-		BlockNumber: block.Number,
-		BlockHash:   block.Hash,
+		BlockNumber: block.Number.Bytes(),
+		BlockHash:   block.Hash.Hex(),
 	}
 }

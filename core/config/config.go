@@ -22,6 +22,7 @@ type (
 		Name    string `env-required:"true" yaml:"name"    env:"APP_NAME"`
 		Version string `env-required:"true" yaml:"version" env:"APP_VERSION"`
 		Stage   string `env-required:"true" yaml:"stage"   env:"APP_STAGE"`
+		Worker  int    `env-required:"true" yaml:"worker"  env:"APP_WORKER"`
 	}
 
 	HTTP struct {

@@ -22,17 +22,17 @@ type Trace struct {
 // aggregateBlock aggregates a block and publishes the messages to the broker
 func (s *Server) aggregateBlock(channel *amqp.Channel, block *types.Block) error {
 	// publish block message
-	blockMessage, err := json.Marshal(block.Header())
+	blockMessage := blockchain.ConvertBlockToBlock(block)
+
+	s.log.Debug("publishing block message to broker", zap.Any("block", blockMessage))
+
+	err := s.publisher.PublishMessage(channel, rabbitmq.BlockExchange, rabbitmq.BlockRoute, blockMessage)
 	if err != nil {
 		s.log.Error("error in publishing block message to broker", zap.Any("block", block), zap.Error(err))
 		return err
 	}
 
-	err = s.publisher.PublishMessage(channel, rabbitmq.BlockExchange, rabbitmq.BlockRoute, blockMessage)
-	if err != nil {
-		s.log.Error("error in publishing block message to broker", zap.Any("block", block), zap.Error(err))
-		return err
-	}
+	s.log.Debug("starting to aggregate transactions", zap.Bool("channel", channel == nil))
 
 	// aggregate transactions and compute reward
 	totalGasFees, err := s.aggregateTransactions(channel, block)
@@ -61,24 +61,30 @@ func (s *Server) aggregateBlock(channel *amqp.Channel, block *types.Block) error
 func (s *Server) aggregateTransactions(channel *amqp.Channel, block *types.Block) (uint64, error) {
 	var totalGasFees uint64
 
-	for _, transaction := range block.Transactions() {
-		// publish transaction message
-		transactionMessage, err := transaction.MarshalJSON()
-		if err != nil {
-			s.log.Error("error in marshalling transaction message", zap.Error(err))
-			return 0, err
-		}
-
-		err = s.publisher.PublishMessage(channel, rabbitmq.TransactionExchange, rabbitmq.TransactionRoute, transactionMessage)
-		if err != nil {
-			s.log.Error("error in publishing transaction message to broker", zap.Error(err))
-			return 0, err
-		}
-
+	for index, transaction := range block.Transactions() {
 		// get transaction receipt
 		transactionReceipt, err := s.blockchainProcessor.GetTransactionReceipt(transaction)
 		if err != nil {
 			s.log.Error("error in getting transaction receipt")
+			return 0, err
+		}
+
+		// publish transaction isntance
+		transactionInstance, err := s.blockchainProcessor.ConvertTransactionToTransaction(transaction, block.Hash(), transactionReceipt, index)
+		if err != nil {
+			s.log.Error("error in converting transaction to custom type", zap.Error(err))
+			return 0, err
+		}
+
+		s.log.Debug(
+			"publishing transaction message to broker",
+			zap.String("transaction hash", transactionInstance.Hash.String()),
+			zap.String("block hash", transactionInstance.BlockHash.String()),
+		)
+
+		err = s.publisher.PublishMessage(channel, rabbitmq.TransactionExchange, rabbitmq.TransactionRoute, transactionInstance)
+		if err != nil {
+			s.log.Error("error in publishing transaction message to broker", zap.Error(err))
 			return 0, err
 		}
 

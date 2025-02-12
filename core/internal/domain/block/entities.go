@@ -1,21 +1,23 @@
 package block
 
-import "time"
+import (
+	"github.com/elmiringos/indexer/indexer-core/internal/domain"
+	"github.com/ethereum/go-ethereum/common"
+)
 
 type Block struct {
-	Hash          string
-	Number        int64
-	MinerHash     string
-	ParentHash    string
-	GasLimit      int64
-	GasUsed       int64
-	Nonce         string
-	Size          int64
-	Difficulty    int64
-	Consensus     bool
-	BaseFeePerGas int64
-	IsEmpty       bool
-	Timestamp     time.Time
+	Hash          common.Hash    `json:"hash"`
+	Number        domain.BigInt  `json:"number"`
+	MinerHash     common.Address `json:"miner_hash"`
+	ParentHash    common.Hash    `json:"parent_hash"`
+	GasLimit      uint64         `json:"gas_limit"`
+	GasUsed       uint64         `json:"gas_used"`
+	Nonce         uint64         `json:"nonce"`
+	Size          uint64         `json:"size"`
+	Difficulty    domain.BigInt  `json:"difficulty"`
+	IsPos         bool           `json:"is_pos"`
+	BaseFeePerGas domain.BigInt  `json:"base_fee_per_gas"`
+	Timestamp     uint64         `json:"timestamp"`
 }
 
 func (b *Block) ToMap() map[string]interface{} {
@@ -29,9 +31,8 @@ func (b *Block) ToMap() map[string]interface{} {
 		"nonce":            b.Nonce,
 		"size":             b.Size,
 		"difficulty":       b.Difficulty,
-		"consensus":        b.Consensus,
+		"is_pos":           b.IsPos,
 		"base_fee_per_gas": b.BaseFeePerGas,
-		"is_empty":         b.IsEmpty,
 		"timestamp":        b.Timestamp,
 	}
 }

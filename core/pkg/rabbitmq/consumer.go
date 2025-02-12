@@ -1,47 +1,45 @@
 package rabbitmq
 
 import (
-	"encoding/json"
-
-	"github.com/elmiringos/indexer/producer/pkg/logger"
-
-	ampq "github.com/rabbitmq/amqp091-go"
+	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
+
+	"github.com/elmiringos/indexer/indexer-core/pkg/logger"
 )
 
-type Publisher struct {
-	conn *ampq.Connection
+type Consumer struct {
+	conn *amqp091.Connection
 	log  *zap.Logger
 }
 
-func NewPublisher(url string) *Publisher {
+func NewConsumer(url string) *Consumer {
 	log := logger.GetLogger()
 	if log == nil {
 		panic("logger is not initialized")
 	}
 
-	conn, err := ampq.Dial(url)
+	conn, err := amqp091.Dial(url)
 	if err != nil {
 		log.Fatal("err in connecting to ampq", zap.Error(err), zap.String("URL", url))
 	}
 
-	return &Publisher{
+	return &Consumer{
 		conn: conn,
 		log:  log,
 	}
 }
 
-func (p *Publisher) CreateChannel() *ampq.Channel {
-	channel, err := p.conn.Channel()
+func (c *Consumer) CreateChannel() *amqp091.Channel {
+	channel, err := c.conn.Channel()
 	if err != nil {
-		p.log.Fatal("err in creating channel to ampq", zap.Error(err))
+		c.log.Fatal("err in creating channel to ampq", zap.Error(err))
 	}
 
 	return channel
 }
 
-func (p *Publisher) MakeNewQueueAndExchange(exchange ExchangeName, routingKey RoutingKey, queueType QueueType) (*ampq.Queue, error) {
-	channel := p.CreateChannel()
+func (c *Consumer) MakeNewQueueAndExchange(queueType QueueType, exchange ExchangeName, routingKey RoutingKey) (*amqp091.Queue, error) {
+	channel := c.CreateChannel()
 
 	err := channel.ExchangeDeclare(
 		string(exchange), // name
@@ -82,26 +80,25 @@ func (p *Publisher) MakeNewQueueAndExchange(exchange ExchangeName, routingKey Ro
 	return &queue, nil
 }
 
-func (p *Publisher) PublishMessage(channel *ampq.Channel, exchange ExchangeName, routingKey RoutingKey, message interface{}) error {
-	body, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
+func (c *Consumer) Consume(channel *amqp091.Channel, queue QueueType) <-chan amqp091.Delivery {
 
-	err = channel.Publish(
-		string(exchange),
-		string(routingKey),
+	msgs, err := channel.Consume(
+		string(queue),
+		"",
 		false,
 		false,
-		ampq.Publishing{
-			ContentType: "application/json",
-			Body:        body,
-		},
+		false,
+		false,
+		nil,
 	)
 
-	return err
+	if err != nil {
+		c.log.Fatal("Error in cosuming messages from rabbitmq", zap.Error(err), zap.String("queue", string(queue)))
+	}
+
+	return msgs
 }
 
-func (p *Publisher) CloseConnection() error {
-	return p.conn.Close()
+func (c *Consumer) CloseConnection() error {
+	return c.conn.Close()
 }

@@ -5,7 +5,7 @@ import "math/big"
 type InternalTransaction struct {
 	BlockHash       string
 	Index           int
-	TransactionHash string
+	Hash            string
 	Status          int
 	Gas             uint64
 	GasUsed         uint64
@@ -17,6 +17,7 @@ type InternalTransaction struct {
 	ContractAddress string
 	Timestamp       uint64
 	ErrorMsg        string
+	Nonce           uint64
 }
 
 func (i *InternalTransaction) ToMap() map[string]interface{} {

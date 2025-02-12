@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/elmiringos/indexer/producer/config"
@@ -129,19 +130,21 @@ func (s *Server) SyncStartingBlock() {
 		s.log.Fatal("Error in getting starting block", zap.Error(err))
 	}
 
-	if currentBlock.BlockNumber == 0 {
+	currentBlockNumber := blockchain.BytesToBigInt(currentBlock.BlockNumber)
+
+	if currentBlockNumber.Cmp(big.NewInt(0)) == 0 {
 		s.log.Info("No starting block found, starting from block that placed in config.yml")
-	} else if currentBlock.BlockNumber < s.config.Server.BlockStartNumber {
+	} else if currentBlockNumber.Cmp(big.NewInt(s.config.Server.BlockStartNumber)) < 0 {
 		s.log.Warn(
 			"Current block number in Database is less than starting block number. Some data will be lost.",
-			zap.Int64("currentBlockNumber", currentBlock.BlockNumber),
-			zap.Int64("startingBlockNumber", s.config.Server.BlockStartNumber),
+			zap.Any("currentBlockNumber", currentBlockNumber),
+			zap.Any("startingBlockNumber", s.config.Server.BlockStartNumber),
 		)
-	} else if currentBlock.BlockNumber > s.config.Server.BlockStartNumber {
+	} else if currentBlockNumber.Cmp(big.NewInt(s.config.Server.BlockStartNumber)) > 0 {
 		s.log.Fatal(
 			"Current block number is greater than starting block number. This is not possible. Please check the database and the core service.",
-			zap.Int64("currentBlockNumber", currentBlock.BlockNumber),
-			zap.Int64("startingBlockNumber", s.config.Server.BlockStartNumber),
+			zap.Any("currentBlockNumber", currentBlockNumber),
+			zap.Any("startingBlockNumber", s.config.Server.BlockStartNumber),
 		)
 	}
 }

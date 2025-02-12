@@ -1,18 +1,17 @@
 -- block
 CREATE TABLE IF NOT EXISTS "block" (
     "hash" BYTEA PRIMARY KEY,
-    "block_number" INT NOT NULL,
+    "number" TEXT NOT NULL,
     "miner_hash" BYTEA NOT NULL,
     "parent_hash" BYTEA NOT NULL,
-    "gas_limit" NUMERIC NOT NULL,
-    "gas_used" NUMERIC NOT NULL,
-    "nonce" BYTEA,
-    "size" INT NOT NULL,
-    "difficulty" NUMERIC NOT NULL,
-    "consensus" BOOL NOT NULL,
-    "base_fee_per_gas" NUMERIC NOT NULL,
-    "is_empty" BOOL DEFAULT FALSE,
-    "timestamp" TIMESTAMPTZ NOT NULL,
+    "gas_limit" BIGINT NOT NULL,
+    "gas_used" BIGINT NOT NULL,
+    "nonce" BIGINT NOT NULL,
+    "size" BIGINT NOT NULL,
+    "difficulty" TEXT NOT NULL,
+    "is_pos" BOOL NOT NULL,
+    "base_fee_per_gas" TEXT NOT NULL,
+    "timestamp" BIGINT NOT NULL,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -24,7 +23,7 @@ EXECUTE FUNCTION update_modified_column();
 
 
 -- smart_contract
-CREATE TABLE IF NOT EXISTS "contract" (
+CREATE TABLE IF NOT EXISTS "smart_contract" (
     "address_hash" BYTEA PRIMARY KEY,
     "name" VARCHAR NOT NULL,
     "compiler_version" VARCHAR NOT NULL,
@@ -38,7 +37,7 @@ CREATE TABLE IF NOT EXISTS "contract" (
 );
 
 CREATE TRIGGER update_user_modtime
-BEFORE UPDATE ON "contract"
+BEFORE UPDATE ON "smart_contract"
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
 
@@ -57,12 +56,12 @@ CREATE TABLE IF NOT EXISTS "internal_transaction" (
     "from_address" BYTEA NOT NULL,
     "to_address" BYTEA NOT NULL,
     "create_contract_address_hash" BYTEA NOT NULL,
-    "timestamp" TIMESTAMPTZ NOT NULL,
+    "timestamp" BIGINT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY ("block_hash", "index"),
     FOREIGN KEY ("block_hash") REFERENCES "block"("hash") ON DELETE CASCADE,
-    FOREIGN KEY ("create_contract_address_hash") REFERENCES "contract"("address_hash") ON DELETE CASCADE
+    FOREIGN KEY ("create_contract_address_hash") REFERENCES "smart_contract"("address_hash") ON DELETE CASCADE
 );
 
 CREATE TRIGGER update_user_modtime
@@ -99,10 +98,11 @@ CREATE TABLE IF NOT EXISTS "transaction" (
     "gas" NUMERIC NOT NULL,
     "gas_used" NUMERIC NOT NULL,
     "input" BYTEA,
-    "amount" NUMERIC NOT NULL,
+    "value" NUMERIC NOT NULL,
     "from_address" BYTEA NOT NULL,
     "to_address" BYTEA NOT NULL,
-    "timestamp" TIMESTAMP NOT NULL,
+    "nonce" BIGINT NOT NULL,
+    "timestamp" BIGINT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY ("hash"),

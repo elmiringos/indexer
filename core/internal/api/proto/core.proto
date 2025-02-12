@@ -10,7 +10,7 @@ service CoreService {
 message GetCurrentBlockRequest {}
 
 message GetCurrentBlockResponse {
-    int64 block_number = 1;
+    bytes block_number = 1;
     string block_hash = 2;
 }
 

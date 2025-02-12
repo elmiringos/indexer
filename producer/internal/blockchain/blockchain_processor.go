@@ -164,7 +164,7 @@ func (p *BlockchainProcessor) ListenNewBlocks(startBlockNumber int64) <-chan *ty
 				}
 				p.log.Debug("Get block by hash", zap.Any("number", block.Number()))
 				blocks <- block
-				p.log.Debug("Successful send block to blocks channel", zap.Any("number", block.Number()))
+				p.log.Debug("Successful send block to blocks to local queue", zap.Any("number", block.Number()))
 			}
 		}
 	}()
@@ -393,4 +393,15 @@ func FetchMetadata(tokenURI string) (*TokenMetadata, error) {
 	var metadata TokenMetadata
 	json.NewDecoder(resp.Body).Decode(&metadata)
 	return &metadata, nil
+}
+
+func (p *BlockchainProcessor) GetTransactionSender(tx *types.Transaction) (common.Address, error) {
+	// Use LatestSignerForChainID which handles all transaction types
+	signer := types.LatestSignerForChainID(tx.ChainId())
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("failed to get transaction sender: %w", err)
+	}
+
+	return from, nil
 }

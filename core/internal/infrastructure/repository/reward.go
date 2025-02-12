@@ -1,11 +1,25 @@
 package repository
 
-import "database/sql"
+import (
+	"context"
+	"database/sql"
+
+	"github.com/elmiringos/indexer/indexer-core/internal/domain/reward"
+	"github.com/elmiringos/indexer/indexer-core/pkg/redis"
+)
 
 type RewardRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	redis *redis.Client
 }
 
-func NewRewardRepository(db *sql.DB) *RewardRepository {
-	return &RewardRepository{db: db}
+func NewRewardRepository(db *sql.DB, redis *redis.Client) *RewardRepository {
+	return &RewardRepository{db: db, redis: redis}
+}
+
+func (r *RewardRepository) SaveReward(ctx context.Context, reward *reward.Reward) (string, error) {
+	query := `insert into rewards (block_hash, address_hash, amount) values ($1, $2, $3)`
+	_, err := r.db.ExecContext(ctx, query, reward.BlockHash, reward.AddressHash, reward.Amount)
+
+	return reward.BlockHash, err
 }

@@ -1,3 +1,7 @@
 package internal_transaction
 
-type Repository interface{}
+import "context"
+
+type Repository interface {
+	SaveInternalTransaction(ctx context.Context, tx *InternalTransaction) (string, error)
+}

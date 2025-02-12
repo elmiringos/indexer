@@ -2,6 +2,7 @@ server:
   name: "indexer-core"
   version: "0.0.1"
   stage: "dev"
+  worker: 10
 
 http:
   port: "9090"

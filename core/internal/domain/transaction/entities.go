@@ -1,19 +1,23 @@
 package transaction
 
-import "time"
+import (
+	"github.com/elmiringos/indexer/indexer-core/internal/domain"
+	"github.com/ethereum/go-ethereum/common"
+)
 
 type Transaction struct {
-	Hash      string
-	BlockHash string
-	Index     int
-	Status    int
-	Gas       string
-	GasUsed   string
-	Input     string
-	Amount    string
-	From      string
-	To        string
-	Timestamp time.Time
+	Hash      common.Hash    `json:"hash"`
+	BlockHash common.Hash    `json:"block_hash"`
+	Index     int            `json:"index"`
+	Status    uint64         `json:"status"`
+	Gas       uint64         `json:"gas"`
+	GasUsed   uint64         `json:"gas_used"`
+	Input     []byte         `json:"input"`
+	Value     domain.BigInt  `json:"value"`
+	From      common.Address `json:"from"`
+	To        common.Address `json:"to"`
+	Nonce     uint64         `json:"nonce"`
+	Timestamp int64          `json:"timestamp"`
 }
 
 func (t *Transaction) ToMap() map[string]interface{} {
@@ -25,10 +29,11 @@ func (t *Transaction) ToMap() map[string]interface{} {
 		"gas":        t.Gas,
 		"gas_used":   t.GasUsed,
 		"input":      t.Input,
-		"amount":     t.Amount,
+		"value":      t.Value,
 		"from":       t.From,
 		"to":         t.To,
 		"timestamp":  t.Timestamp,
+		"nonce":      t.Nonce,
 	}
 }
 
