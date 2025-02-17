@@ -22,7 +22,7 @@ type (
 		Version          string `yaml:"version"`
 		Stage            string `yaml:"stage"`
 		WorkerCount      int    `yaml:"worker_count"`
-		BlockStartNumber int64  `yaml:"block_start_number"`
+		BlockStartNumber string `yaml:"block_start_number"`
 		CoreServiceUrl   string `yaml:"core_service_url"`
 	}
 

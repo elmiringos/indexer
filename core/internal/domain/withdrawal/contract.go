@@ -1,3 +1,7 @@
 package withdrawal
 
-type Repository interface{}
+import "context"
+
+type Repository interface {
+	SaveWithdrawal(ctx context.Context, withdrawal *Withdrawal) error
+}

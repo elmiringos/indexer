@@ -117,12 +117,12 @@ EXECUTE FUNCTION update_modified_column();
 
 -- reward
 CREATE TABLE IF NOT EXISTS "reward" (
-    "block_hash" BYTEA,
-    "address_hash" BYTEA,
+    "block_hash" BYTEA NOT NULL,
+    "address" BYTEA NOT NULL,
     "amount" NUMERIC NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY ("block_hash", "address_hash"),
+    PRIMARY KEY ("block_hash", "address"),
     FOREIGN KEY ("block_hash") REFERENCES "block"("hash") ON DELETE CASCADE
 );
 

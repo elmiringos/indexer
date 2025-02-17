@@ -3,7 +3,7 @@ server:
   version: "0.0.1"
   stage: "dev"
   worker_count: 1
-  block_start_number: 17423949
+  block_start_number: 7712112
   core_service_url: "localhost:9090"
 
 http:

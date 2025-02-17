@@ -17,9 +17,9 @@ func NewRewardRepository(db *sql.DB, redis *redis.Client) *RewardRepository {
 	return &RewardRepository{db: db, redis: redis}
 }
 
-func (r *RewardRepository) SaveReward(ctx context.Context, reward *reward.Reward) (string, error) {
-	query := `insert into rewards (block_hash, address_hash, amount) values ($1, $2, $3)`
-	_, err := r.db.ExecContext(ctx, query, reward.BlockHash, reward.AddressHash, reward.Amount)
+func (r *RewardRepository) SaveReward(ctx context.Context, reward *reward.Reward) error {
+	query := `insert into reward (block_hash, address, amount) values ($1, $2, $3)`
+	_, err := r.db.ExecContext(ctx, query, reward.BlockHash, reward.Address, reward.Amount)
 
-	return reward.BlockHash, err
+	return err
 }

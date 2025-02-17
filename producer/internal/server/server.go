@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"sync"
@@ -124,34 +125,39 @@ func (s *Server) ResetState() {
 	}
 }
 
-func (s *Server) SyncStartingBlock() {
+func (s *Server) SyncStartingBlock(configBlockStartNumber *big.Int) {
 	currentBlock, err := s.grpcCoreClient.GetCurrentBlock()
 	if err != nil {
 		s.log.Fatal("Error in getting starting block", zap.Error(err))
 	}
 
-	currentBlockNumber := blockchain.BytesToBigInt(currentBlock.BlockNumber)
+	currentBlockNumber := big.NewInt(0).SetBytes(currentBlock.BlockNumber)
 
 	if currentBlockNumber.Cmp(big.NewInt(0)) == 0 {
 		s.log.Info("No starting block found, starting from block that placed in config.yml")
-	} else if currentBlockNumber.Cmp(big.NewInt(s.config.Server.BlockStartNumber)) < 0 {
+	} else if currentBlockNumber.Cmp(configBlockStartNumber) < 0 {
 		s.log.Warn(
-			"Current block number in Database is less than starting block number. Some data will be lost.",
+			"Current block number in Database is less than config block number. Some data will be lost.",
 			zap.Any("currentBlockNumber", currentBlockNumber),
-			zap.Any("startingBlockNumber", s.config.Server.BlockStartNumber),
+			zap.Any("startingBlockNumber", configBlockStartNumber),
 		)
-	} else if currentBlockNumber.Cmp(big.NewInt(s.config.Server.BlockStartNumber)) > 0 {
+	} else if currentBlockNumber.Cmp(configBlockStartNumber) > 0 {
 		s.log.Fatal(
 			"Current block number is greater than starting block number. This is not possible. Please check the database and the core service.",
 			zap.Any("currentBlockNumber", currentBlockNumber),
-			zap.Any("startingBlockNumber", s.config.Server.BlockStartNumber),
+			zap.Any("startingBlockNumber", configBlockStartNumber),
 		)
 	}
 }
 
 func (s *Server) StartBlockchainDataConsuming() {
+	blockStartNumber, ok := big.NewInt(0).SetString(s.config.Server.BlockStartNumber, 10)
+	if !ok {
+		s.log.Fatal("Error in setting block start number", zap.String("blockStartNumber", s.config.Server.BlockStartNumber))
+	}
+
 	// Sync starting block before starting the workers
-	s.SyncStartingBlock()
+	s.SyncStartingBlock(blockStartNumber)
 
 	// Setup all queues (blockQueue, transactionQueue, withdrawalQueue, transactionLogQueue, internalTransactionQueue, transactionActionQueue, tokenEventQueue)
 	s.setupAllQueues()
@@ -159,7 +165,10 @@ func (s *Server) StartBlockchainDataConsuming() {
 	var wg sync.WaitGroup
 
 	// Listen for new blocks
-	blocks := s.blockchainProcessor.ListenNewBlocks(s.config.Server.BlockStartNumber)
+	blocks, err := s.blockchainProcessor.GenerateBlocks(context.Background(), blockStartNumber)
+	if err != nil {
+		s.log.Fatal("Error in generating blocks", zap.Error(err))
+	}
 
 	// Start the worker pool
 	s.startWorkerPool(s.config.WorkerCount, blocks, &wg)

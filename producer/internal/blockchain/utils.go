@@ -30,11 +30,3 @@ func (i *BigInt) UnmarshalJSON(data []byte) error {
 	*i = BigInt(*bi)
 	return nil
 }
-
-func BytesToBigInt(data []byte) *big.Int {
-	return big.NewInt(0).SetBytes(data)
-}
-
-func BigIntToBytes(i *big.Int) []byte {
-	return i.Bytes()
-}

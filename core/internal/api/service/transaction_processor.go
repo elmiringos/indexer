@@ -8,17 +8,17 @@ import (
 
 	"github.com/elmiringos/indexer/indexer-core/internal/domain/block"
 	"github.com/elmiringos/indexer/indexer-core/internal/domain/transaction"
-	"github.com/ethereum/go-ethereum/common"
 
 	"go.uber.org/zap"
 )
 
 var (
-	ErrBlockDoesNotExist           = errors.New("block does not exist")
-	ErrFailedToUnmarshal           = errors.New("failed to unmarshal transaction")
-	ErrFailedToCheckBlockExists    = errors.New("failed to check if block exists")
-	ErrFailedToSaveTransaction     = errors.New("failed to save transaction")
-	ErrFailedToSaveTransactionHash = errors.New("failed to save transaction hash")
+	ErrFailedToUnmarshalTransaction           = errors.New("failed to unmarshal transaction")
+	ErrFailedToSaveTransaction                = errors.New("failed to save transaction")
+	ErrFailedToSaveTransactionHash            = errors.New("failed to save transaction hash")
+	ErrFailedToDeleteBlockHashTransaction     = errors.New("failed to delete block hash for transaction")
+	ErrBlockDoesNotExistForTransaction        = errors.New("block does not exist for transaction")
+	ErrFailedToCheckBlockExistsForTransaction = errors.New("failed to check if block exists for transaction")
 )
 
 type TransactionProcessor struct {
@@ -40,29 +40,20 @@ func NewTransactionProcessor(
 	}
 }
 
-func (p *TransactionProcessor) checkBlockExists(ctx context.Context, blockHash common.Hash) (bool, error) {
-	blockExists, err := p.blockRepository.CheckBlockExists(ctx, blockHash)
-	if err != nil {
-		return false, err
-	}
-
-	return blockExists, nil
-}
-
 // TODO: Think about distributed transaction for atomicity to multiple resources (psql, redis)
 func (p *TransactionProcessor) Process(ctx context.Context, data []byte) error {
 	transaction := &transaction.Transaction{}
 	if err := json.Unmarshal(data, transaction); err != nil {
-		return fmt.Errorf("%w: %w", ErrFailedToUnmarshal, err)
+		return fmt.Errorf("%w: %w", ErrFailedToUnmarshalTransaction, err)
 	}
 
-	blockExists, err := p.checkBlockExists(ctx, transaction.BlockHash)
+	blockExists, err := p.blockRepository.CheckBlockExistsForTransaction(ctx, transaction.BlockHash)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrFailedToCheckBlockExists, err)
+		return fmt.Errorf("%w: %w", ErrFailedToCheckBlockExistsForTransaction, err)
 	}
 
 	if !blockExists {
-		return fmt.Errorf("%w: %s", ErrBlockDoesNotExist, transaction.BlockHash)
+		return fmt.Errorf("%w: %s", ErrBlockDoesNotExistForTransaction, transaction.BlockHash)
 	}
 
 	if err := p.transactionRepository.SaveTransaction(ctx, transaction); err != nil {

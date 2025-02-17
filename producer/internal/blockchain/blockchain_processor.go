@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/elmiringos/indexer/producer/config"
 	"github.com/elmiringos/indexer/producer/pkg/logger"
@@ -108,68 +109,136 @@ func (p *BlockchainProcessor) GetBlockByNumber(ctx context.Context, blockNumber 
 	return block, nil
 }
 
-// ListenNewBlocks listens for new blocks and get old blocks
-func (p *BlockchainProcessor) ListenNewBlocks(startBlockNumber int64) <-chan *types.Block {
-	headers := make(chan *types.Header)
-	blocks := make(chan *types.Block, 100)
-
-	go func() {
-		defer close(blocks)
-
-		latestBlock, err := p.ethHttpClient.BlockByNumber(context.Background(), nil)
-		if err != nil {
-			p.log.Error("Failed to get latest block", zap.Error(err))
-			return
-		}
-		currentBlockNum := startBlockNumber
-		latestBlockNum := latestBlock.Number().Int64()
-
-		for currentBlockNum <= latestBlockNum {
-			block, err := p.ethHttpClient.BlockByNumber(
-				context.Background(),
-				big.NewInt(currentBlockNum),
-			)
-			if err != nil {
-				p.log.Error("Failed to get historical block",
-					zap.Int64("number", currentBlockNum),
-					zap.Error(err),
-				)
-				currentBlockNum++
-				continue
-			}
-			blocks <- block
-			currentBlockNum++
-		}
-
-		sub, err := p.ethWSClient.SubscribeNewHead(context.Background(), headers)
-		if err != nil {
-			p.log.Error("Failed to subscribe to new blocks", zap.Error(err))
-			return
-		}
-		defer sub.Unsubscribe()
-
-		for {
+func (p *BlockchainProcessor) GenerateHistoricalBlocks(ctx context.Context, configBlockNumber *big.Int, blocks chan<- *types.Block, latestBlock <-chan *types.Block) error {
+	select {
+	case latestBlockNumber := <-latestBlock:
+		for configBlockNumber.Cmp(latestBlockNumber.Number()) == -1 {
 			select {
-			case err := <-sub.Err():
-				p.log.Error("Error in block subscription", zap.Error(err))
-				return
-			case header, ok := <-headers:
-				if !ok {
-					return
-				}
-				block, err := p.ethWSClient.BlockByHash(context.Background(), header.Hash())
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				block, err := p.ethHttpClient.BlockByNumber(ctx, configBlockNumber)
 				if err != nil {
-					p.log.Error("Failed to get block by hash", zap.Error(err))
+					p.log.Error("Failed to get historical block",
+						zap.Any("number", configBlockNumber),
+						zap.Error(err),
+					)
+					// Exponential backoff could be added here
+					configBlockNumber = configBlockNumber.Add(configBlockNumber, big.NewInt(1))
 					continue
 				}
-				p.log.Debug("Get block by hash", zap.Any("number", block.Number()))
-				blocks <- block
-				p.log.Debug("Successful send block to blocks to local queue", zap.Any("number", block.Number()))
+				select {
+				case blocks <- block:
+					configBlockNumber = configBlockNumber.Add(configBlockNumber, big.NewInt(1))
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+		}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (p *BlockchainProcessor) ListenNewBlocks(ctx context.Context, blocks chan<- *types.Block, latestBlock chan<- *types.Block) error {
+	headers := make(chan *types.Header)
+	sentFirstBlock := false
+
+	sub, err := p.ethWSClient.SubscribeNewHead(ctx, headers)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to new blocks: %w", err)
+	}
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case err := <-sub.Err():
+			return fmt.Errorf("subscription error: %w", err)
+		case header, ok := <-headers:
+			if !ok {
+				return fmt.Errorf("headers channel closed unexpectedly")
+			}
+
+			block, err := p.ethHttpClient.BlockByHash(ctx, header.Hash())
+			if err != nil {
+				p.log.Error("Failed to get block by hash",
+					zap.Error(err),
+					zap.String("hash", header.Hash().String()),
+				)
+				continue
+			}
+
+			select {
+			case blocks <- block:
+				if !sentFirstBlock {
+					fmt.Println("sending first block")
+					select {
+					case latestBlock <- block:
+						sentFirstBlock = true
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				}
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+}
+
+// GenerateBlocks creates a stream of blocks starting from configBlockNumber,
+// including both historical blocks and new incoming blocks.
+// It returns a channel that will receive blocks in sequential order.
+// The caller should provide a context for cancellation.
+func (p *BlockchainProcessor) GenerateBlocks(ctx context.Context, configBlockNumber *big.Int) (<-chan *types.Block, error) {
+	blocks := make(chan *types.Block, 100)
+	latestBlock := make(chan *types.Block, 1)
+
+	go func() {
+		var wg sync.WaitGroup
+
+		wg.Add(2)
+
+		// Create error channels for goroutines
+		historicalErr := make(chan error, 1)
+		newBlocksErr := make(chan error, 1)
+
+		// Start goroutines with error handling
+		go func() {
+			defer wg.Done()
+			historicalErr <- p.GenerateHistoricalBlocks(ctx, configBlockNumber, blocks, latestBlock)
+		}()
+
+		go func() {
+			defer wg.Done()
+			newBlocksErr <- p.ListenNewBlocks(ctx, blocks, latestBlock)
+		}()
+
+		go func() {
+			wg.Wait()
+			close(blocks)
+			close(latestBlock)
+		}()
+
+		// Wait for either context cancellation or an error
+		select {
+		case <-ctx.Done():
+			p.log.Info("Context cancelled, stopping block generation")
+		case err := <-historicalErr:
+			if err != nil && err != context.Canceled {
+				p.log.Error("Historical blocks error", zap.Error(err))
+			}
+		case err := <-newBlocksErr:
+			if err != nil && err != context.Canceled {
+				p.log.Error("New blocks subscription error", zap.Error(err))
 			}
 		}
 	}()
 
-	return blocks
+	return blocks, nil
 }
 
 // GetBlockTraces returns the traces of a block

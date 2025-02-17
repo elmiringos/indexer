@@ -32,7 +32,7 @@ type Server struct {
 // NewServer initializes the gRPC server
 func NewServer(cfg *config.Config, db *postgres.Connection, redis *redis.Client, logger *zap.Logger) *Server {
 	// Initialize repositories
-	blockRepository := repository.NewBlockRepository(db.GetDb(), redis)
+	blockRepository := repository.NewBlockRepository(db.GetDb(), redis, logger)
 	internalTransactionRepository := repository.NewInternalTransactionRepository(db.GetDb(), redis)
 	rewardRepository := repository.NewRewardRepository(db.GetDb(), redis)
 	smartContractRepository := repository.NewSmartContractRepository(db.GetDb(), redis)
@@ -47,6 +47,8 @@ func NewServer(cfg *config.Config, db *postgres.Connection, redis *redis.Client,
 	// Initialize queue channels and get messages
 	blockMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.BlockQueue)
 	transactionMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.TransactionQueue)
+	rewardMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.RewardQueue)
+	withdrawalMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.WithdrawalQueue)
 
 	// Initialize service
 	coreService := service.NewCoreService(
@@ -73,6 +75,16 @@ func NewServer(cfg *config.Config, db *postgres.Connection, redis *redis.Client,
 	transactionProcessor := service.NewTransactionProcessor(blockRepository, transactionRepository, logger)
 	transactionWorkerPool := service.NewWorkerPool(transactionProcessor, logger, cfg.Server.Worker)
 	go transactionWorkerPool.Start(transactionMessages)
+
+	// Reward processor
+	rewardProcessor := service.NewRewardProcessor(blockRepository, rewardRepository, logger)
+	rewardWorkerPool := service.NewWorkerPool(rewardProcessor, logger, cfg.Server.Worker)
+	go rewardWorkerPool.Start(rewardMessages)
+
+	// Withdrawal processor
+	withdrawalProcessor := service.NewWithdrawalProcessor(blockRepository, withdrawalRepository, logger)
+	withdrawalWorkerPool := service.NewWorkerPool(withdrawalProcessor, logger, cfg.Server.Worker)
+	go withdrawalWorkerPool.Start(withdrawalMessages)
 
 	return &Server{
 		cfg:      cfg,

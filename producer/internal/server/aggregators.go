@@ -5,6 +5,7 @@ import (
 
 	"github.com/elmiringos/indexer/producer/internal/blockchain"
 	"github.com/elmiringos/indexer/producer/pkg/rabbitmq"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
@@ -49,7 +50,7 @@ func (s *Server) aggregateBlock(channel *amqp.Channel, block *types.Block) error
 	}
 
 	// aggregate withdrawals
-	err = s.aggregateWithdrawals(channel, block.Withdrawals())
+	err = s.aggregateWithdrawals(channel, block.Withdrawals(), block.Hash())
 	if err != nil {
 		s.log.Error("error in aggregating withdrawals", zap.Error(err))
 		return err
@@ -69,8 +70,8 @@ func (s *Server) aggregateTransactions(channel *amqp.Channel, block *types.Block
 			return 0, err
 		}
 
-		// publish transaction isntance
-		transactionInstance, err := s.blockchainProcessor.ConvertTransactionToTransaction(transaction, block.Hash(), transactionReceipt, index)
+		// publish transaction message
+		transactionMessage, err := s.blockchainProcessor.ConvertTransactionToTransaction(transaction, block.Hash(), transactionReceipt, index)
 		if err != nil {
 			s.log.Error("error in converting transaction to custom type", zap.Error(err))
 			return 0, err
@@ -78,11 +79,11 @@ func (s *Server) aggregateTransactions(channel *amqp.Channel, block *types.Block
 
 		s.log.Debug(
 			"publishing transaction message to broker",
-			zap.String("transaction hash", transactionInstance.Hash.String()),
-			zap.String("block hash", transactionInstance.BlockHash.String()),
+			zap.String("transaction hash", transactionMessage.Hash.String()),
+			zap.String("block hash", transactionMessage.BlockHash.String()),
 		)
 
-		err = s.publisher.PublishMessage(channel, rabbitmq.TransactionExchange, rabbitmq.TransactionRoute, transactionInstance)
+		err = s.publisher.PublishMessage(channel, rabbitmq.TransactionExchange, rabbitmq.TransactionRoute, transactionMessage)
 		if err != nil {
 			s.log.Error("error in publishing transaction message to broker", zap.Error(err))
 			return 0, err
@@ -125,19 +126,17 @@ func (s *Server) aggregateTransactions(channel *amqp.Channel, block *types.Block
 	return totalGasFees, nil
 }
 
-func (s *Server) aggregateWithdrawals(channel *amqp.Channel, withdrawals []*types.Withdrawal) error {
+func (s *Server) aggregateWithdrawals(channel *amqp.Channel, withdrawals []*types.Withdrawal, blockHash common.Hash) error {
 	for _, withdrawal := range withdrawals {
-		withdrawalMessage, err := json.Marshal(withdrawal)
-		if err != nil {
-			s.log.Error("error in marshalling withdrawal message", zap.Error(err))
-			return err
-		}
+		withdrawalMessage := blockchain.ConvertWithdrawalToWithdrawal(withdrawal, blockHash)
 
-		err = s.publisher.PublishMessage(channel, rabbitmq.WithdrawalExchange, rabbitmq.WithdrawalRoute, withdrawalMessage)
+		err := s.publisher.PublishMessage(channel, rabbitmq.WithdrawalExchange, rabbitmq.WithdrawalRoute, withdrawalMessage)
 		if err != nil {
 			s.log.Error("error in publishing withdrawal message to broker", zap.Error(err))
 			return err
 		}
+
+		s.log.Debug("published withdrawal message to broker", zap.Any("withdrawal", withdrawalMessage))
 	}
 
 	return nil
@@ -181,23 +180,18 @@ func (s *Server) aggragateTransactionLogs(channel *amqp.Channel, transactionLogs
 
 func (s *Server) aggregateReward(channel *amqp.Channel, totalGasFees uint64, block *types.Block) error {
 	reward := &blockchain.Reward{
-		Address:   block.Coinbase().String(),
+		Address:   block.Coinbase(),
 		Amount:    totalGasFees,
-		Block:     block.Number(),
-		BlockHash: block.Hash().String(),
+		BlockHash: block.Hash(),
 	}
 
-	rewardMessage, err := json.Marshal(reward)
-	if err != nil {
-		s.log.Error("error in marshalling reward message", zap.Error(err))
-		return err
-	}
-
-	err = s.publisher.PublishMessage(channel, rabbitmq.RewardExchange, rabbitmq.RewardRoute, rewardMessage)
+	err := s.publisher.PublishMessage(channel, rabbitmq.RewardExchange, rabbitmq.RewardRoute, reward)
 	if err != nil {
 		s.log.Error("error in publishing reward message to broker", zap.Error(err))
 		return err
 	}
+
+	s.log.Debug("published reward message to broker", zap.Any("reward", reward))
 
 	return nil
 }

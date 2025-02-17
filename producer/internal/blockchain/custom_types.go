@@ -98,6 +98,34 @@ func (p *BlockchainProcessor) ConvertTransactionToTransaction(transaction *types
 	return transactionMessage, nil
 }
 
+// Reward represents a reward for a validator
+type Reward struct {
+	BlockHash common.Hash    `json:"block_hash"`
+	Address   common.Address `json:"address"`
+	Amount    uint64         `json:"amount"`
+}
+
+// Withdrawal represents a withdrawal from a validator
+// Using custom type for tracking block hash
+type Withdrawal struct {
+	Index          uint64         `json:"index"`
+	BlockHash      common.Hash    `json:"block_hash"`
+	AddressHash    common.Address `json:"address_hash"`
+	ValidatorIndex uint64         `json:"validator_index"`
+	Amount         uint64         `json:"amount"`
+}
+
+// ConvertWithdrawalToWithdrawal converts a types.Withdrawal to a custom type Withdrawal
+func ConvertWithdrawalToWithdrawal(withdrawal *types.Withdrawal, blockHash common.Hash) *Withdrawal {
+	return &Withdrawal{
+		Index:          withdrawal.Index,
+		BlockHash:      blockHash,
+		AddressHash:    withdrawal.Address,
+		ValidatorIndex: withdrawal.Validator,
+		Amount:         withdrawal.Amount,
+	}
+}
+
 // TokenMetadata represents the metadata of a token
 type TokenMetadata map[string]interface{}
 
@@ -110,14 +138,6 @@ type TokenEvent struct {
 	TokenMetadata *TokenMetadata `json:"token_metadata"`
 	IsMint        bool           `json:"is_mint"`
 	IsBurn        bool           `json:"is_burn"`
-}
-
-// Reward represents a reward for a validator
-type Reward struct {
-	Address   string   `json:"address"`
-	Amount    uint64   `json:"amount"`
-	Block     *big.Int `json:"block"`
-	BlockHash string   `json:"block_hash"`
 }
 
 // InternalTransaction represents an internal transaction

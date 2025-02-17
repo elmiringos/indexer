@@ -1,3 +1,7 @@
 package reward
 
-type Repository interface{}
+import "context"
+
+type Repository interface {
+	SaveReward(ctx context.Context, reward *Reward) error
+}
