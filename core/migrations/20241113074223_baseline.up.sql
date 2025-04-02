@@ -184,8 +184,7 @@ CREATE TABLE IF NOT EXISTS "token" (
     "fiat_value" NUMERIC,
     "circulation_market_cap" NUMERIC,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY ("address_hash") REFERENCES "smart_contract"("address_hash") ON DELETE CASCADE
+    "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_user_modtime
@@ -204,10 +203,7 @@ CREATE TABLE IF NOT EXISTS "token_transfer" (
     "amount" NUMERIC NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY ("transaction_hash", "log_index"),
-    FOREIGN KEY ("transaction_hash") REFERENCES "transaction"("hash") ON DELETE CASCADE,
-    FOREIGN KEY ("token_contract_address_hash") REFERENCES "token"("address_hash") ON DELETE CASCADE,
-    FOREIGN KEY ("log_index") REFERENCES "transaction_log"("index") ON DELETE CASCADE
+    PRIMARY KEY ("transaction_hash", "log_index")
 );
 
 CREATE TRIGGER update_user_modtime
