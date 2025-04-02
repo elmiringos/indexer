@@ -2,23 +2,41 @@ package token
 
 import (
 	"encoding/json"
-	"math/big"
+
+	"github.com/elmiringos/indexer/indexer-core/internal/domain"
+	"github.com/ethereum/go-ethereum/common"
 )
 
+// TokenMetadata represents the metadata of a token
+type TokenMetadata map[string]interface{}
+
+// TokenEvent represents a token event
+type TokenEvent struct {
+	TransactionHash common.Hash    `json:"transaction_hash"`
+	LogIndex        int            `json:"log_indexl"`
+	From            common.Address `json:"from"`
+	To              common.Address `json:"to"`
+	Value           domain.BigInt  `json:"value"`
+	TokenId         domain.BigInt  `json:"token_id"`
+	TokenMetadata   *TokenMetadata `json:"token_metadata"`
+	IsMint          bool           `json:"is_mint"`
+	IsBurn          bool           `json:"is_burn"`
+}
+
 type Token struct {
-	AddressHash          string
+	Address              common.Address
 	Name                 string
 	Symbol               string
-	TotalSupply          *big.Int
+	TotalSupply          domain.BigInt
 	Decimals             int
 	HolderCount          int
-	FiatValue            *big.Int
-	CirculationMarketCap *big.Int
+	FiatValue            domain.BigInt
+	CirculationMarketCap domain.BigInt
 }
 
 func (t *Token) ToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"address_hash":           t.AddressHash,
+		"address":                t.Address,
 		"name":                   t.Name,
 		"symbol":                 t.Symbol,
 		"total_supply":           t.TotalSupply,
@@ -34,26 +52,27 @@ func MakeTokenSlice(tokens []*Token) []map[string]interface{} {
 	for i, token := range tokens {
 		slices[i] = token.ToMap()
 	}
+
 	return slices
 }
 
 type TokenTransfer struct {
-	TransactionHash          string
-	LogIndex                 int
-	From                     string
-	To                       string
-	TokenContractAddressHash string
-	Amount                   *big.Int
+	TransactionHash      string
+	LogIndex             int
+	From                 common.Address
+	To                   common.Address
+	TokenContractAddress common.Address
+	Amount               domain.BigInt
 }
 
 func (t *TokenTransfer) ToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"transaction_hash":            t.TransactionHash,
-		"log_index":                   t.LogIndex,
-		"from":                        t.From,
-		"to":                          t.To,
-		"token_contract_address_hash": t.TokenContractAddressHash,
-		"amount":                      t.Amount,
+		"transaction_hash":       t.TransactionHash,
+		"log_index":              t.LogIndex,
+		"from":                   t.From,
+		"to":                     t.To,
+		"token_contract_address": t.TokenContractAddress,
+		"amount":                 t.Amount,
 	}
 }
 
@@ -62,22 +81,23 @@ func MakeTokenTransferSlice(tokenTransfers []*TokenTransfer) []map[string]interf
 	for i, tokenTransfer := range tokenTransfers {
 		slices[i] = tokenTransfer.ToMap()
 	}
+
 	return slices
 }
 
 type TokenInstance struct {
-	TokenId                  *big.Int
-	TokenContractAddressHash string
-	OwnerAddressHash         string
-	Metadata                 *json.RawMessage
+	TokenId              domain.BigInt
+	TokenContractAddress common.Address
+	OwnerAddress         common.Address
+	Metadata             *json.RawMessage
 }
 
 func (t *TokenInstance) ToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"token_id":                    t.TokenId,
-		"token_contract_address_hash": t.TokenContractAddressHash,
-		"owner_address_hash":          t.OwnerAddressHash,
-		"metadata":                    t.Metadata,
+		"token_id":               t.TokenId,
+		"token_contract_address": t.TokenContractAddress,
+		"owner_address":          t.OwnerAddress,
+		"metadata":               t.Metadata,
 	}
 }
 
@@ -86,5 +106,6 @@ func MakeTokenInstanceSlice(tokenInstances []*TokenInstance) []map[string]interf
 	for i, tokenInstance := range tokenInstances {
 		slices[i] = tokenInstance.ToMap()
 	}
+
 	return slices
 }

@@ -18,6 +18,7 @@ type Transaction struct {
 	To        common.Address `json:"to"`
 	Nonce     uint64         `json:"nonce"`
 	Timestamp int64          `json:"timestamp"`
+	LogsCount int            `json:"logs_count"`
 }
 
 func (t *Transaction) ToMap() map[string]interface{} {
@@ -47,7 +48,7 @@ func MakeSlice(transactions []*Transaction) []map[string]interface{} {
 
 type TransactionLog struct {
 	Index           int
-	TransactionHash string
+	TransactionHash common.Hash
 	FirstTopic      string
 	SecondTopic     string
 	ThirdTopic      string

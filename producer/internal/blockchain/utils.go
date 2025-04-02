@@ -30,3 +30,11 @@ func (i *BigInt) UnmarshalJSON(data []byte) error {
 	*i = BigInt(*bi)
 	return nil
 }
+
+func FromBytesToBigInt(data []byte) BigInt {
+	// Create a *big.Int from the byte slice
+	convertedBigInt := big.NewInt(0).SetBytes(data)
+
+	// Convert the *big.Int to the custom BigInt type and return
+	return BigInt(*convertedBigInt)
+}

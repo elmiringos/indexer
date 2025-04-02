@@ -10,18 +10,20 @@ import (
 
 // Block represents a block in the blockchain
 type Block struct {
-	Hash          common.Hash    `json:"hash"`
-	Number        BigInt         `json:"number"`
-	MinerHash     common.Address `json:"miner_hash"`
-	ParentHash    common.Hash    `json:"parent_hash"`
-	GasLimit      uint64         `json:"gas_limit"`
-	GasUsed       uint64         `json:"gas_used"`
-	Nonce         uint64         `json:"nonce"`
-	Size          uint64         `json:"size"`
-	Difficulty    BigInt         `json:"difficulty"`
-	IsPos         bool           `json:"is_pos"`
-	BaseFeePerGas BigInt         `json:"base_fee_per_gas"`
-	Timestamp     uint64         `json:"timestamp"`
+	Hash              common.Hash    `json:"hash"`
+	Number            BigInt         `json:"number"`
+	MinerHash         common.Address `json:"miner_hash"`
+	ParentHash        common.Hash    `json:"parent_hash"`
+	GasLimit          uint64         `json:"gas_limit"`
+	GasUsed           uint64         `json:"gas_used"`
+	Nonce             uint64         `json:"nonce"`
+	Size              uint64         `json:"size"`
+	Difficulty        BigInt         `json:"difficulty"`
+	IsPos             bool           `json:"is_pos"`
+	BaseFeePerGas     BigInt         `json:"base_fee_per_gas"`
+	TransactionsCount int            `json:"transactions_count"`
+	WithdrawalsCount  int            `json:"withdrawals_count"`
+	Timestamp         uint64         `json:"timestamp"`
 }
 
 // ConvertBlockToBlock converts a types.Block to a custom type Block
@@ -36,18 +38,20 @@ func ConvertBlockToBlock(block *types.Block) *Block {
 	}
 
 	return &Block{
-		Hash:          block.Hash(),
-		Number:        BigInt(*block.Number()),
-		MinerHash:     block.Coinbase(),
-		ParentHash:    block.ParentHash(),
-		GasLimit:      block.GasLimit(),
-		GasUsed:       block.GasUsed(),
-		Nonce:         block.Nonce(),
-		Size:          block.Size(),
-		Difficulty:    BigInt(*block.Difficulty()),
-		IsPos:         isPoS,
-		BaseFeePerGas: BigInt(*baseFee),
-		Timestamp:     block.Header().Time,
+		Hash:              block.Hash(),
+		Number:            BigInt(*block.Number()),
+		MinerHash:         block.Coinbase(),
+		ParentHash:        block.ParentHash(),
+		GasLimit:          block.GasLimit(),
+		GasUsed:           block.GasUsed(),
+		Nonce:             block.Nonce(),
+		Size:              block.Size(),
+		Difficulty:        BigInt(*block.Difficulty()),
+		IsPos:             isPoS,
+		BaseFeePerGas:     BigInt(*baseFee),
+		TransactionsCount: block.Transactions().Len(),
+		WithdrawalsCount:  block.Withdrawals().Len(),
+		Timestamp:         block.Header().Time,
 	}
 }
 
@@ -65,10 +69,16 @@ type Transaction struct {
 	To        common.Address `json:"to"`
 	Nonce     uint64         `json:"nonce"`
 	Timestamp int64          `json:"timestamp"`
+	LogsCount int            `json:"logs_count"`
 }
 
 // ConvertTransactionToTransaction converts a types.Transaction to a custom type Transaction
-func (p *BlockchainProcessor) ConvertTransactionToTransaction(transaction *types.Transaction, blockHash common.Hash, receipt *types.Receipt, index int) (*Transaction, error) {
+func (p *BlockchainProcessor) ConvertTransactionToTransaction(
+	transaction *types.Transaction,
+	blockHash common.Hash,
+	receipt *types.Receipt,
+	index int,
+) (*Transaction, error) {
 	transactionSender, err := p.GetTransactionSender(transaction)
 	if err != nil {
 		return nil, err
@@ -86,6 +96,7 @@ func (p *BlockchainProcessor) ConvertTransactionToTransaction(transaction *types
 		From:      transactionSender,
 		Nonce:     transaction.Nonce(),
 		Timestamp: transaction.Time().Unix(),
+		LogsCount: len(receipt.Logs),
 	}
 
 	toAddress := transaction.To()
@@ -131,43 +142,45 @@ type TokenMetadata map[string]interface{}
 
 // TokenEvent represents a token event
 type TokenEvent struct {
-	From          string         `json:"from"`
-	To            string         `json:"to"`
-	Value         *big.Int       `json:"value"`
-	TokenId       *big.Int       `json:"token_id"`
-	TokenMetadata *TokenMetadata `json:"token_metadata"`
-	IsMint        bool           `json:"is_mint"`
-	IsBurn        bool           `json:"is_burn"`
+	TransactionHash common.Hash    `json:"transaction_hash"`
+	LogIndex        uint           `json:"log_index"`
+	From            common.Address `json:"from"`
+	To              common.Address `json:"to"`
+	Value           BigInt         `json:"value"`
+	TokenId         BigInt         `json:"token_id"`
+	TokenMetadata   TokenMetadata  `json:"token_metadata"`
+	IsMint          bool           `json:"is_mint"`
+	IsBurn          bool           `json:"is_burn"`
 }
 
 // InternalTransaction represents an internal transaction
 type InternalTransaction struct {
-	BlockHash       string   `json:"block_hash"`
-	Index           int      `json:"index"`
-	Type            string   `json:"type"`
-	TransactionHash string   `json:"transaction_hash"`
-	Status          int      `json:"status"`
-	Gas             uint64   `json:"gas"`
-	GasUsed         uint64   `json:"gas_used"`
-	Input           []byte   `json:"input"`
-	Output          []byte   `json:"output"`
-	Value           *big.Int `json:"value"`
-	From            string   `json:"from"`
-	To              string   `json:"to"`
-	ContractAddress string   `json:"contract_address"`
-	Timestamp       uint64   `json:"timestamp"`
-	ErrorMsg        string   `json:"error_msg"`
+	BlockHash       common.Hash    `json:"block_hash"`
+	Index           int            `json:"index"`
+	Type            string         `json:"type"`
+	TransactionHash common.Hash    `json:"transaction_hash"`
+	Status          int            `json:"status"`
+	Gas             uint64         `json:"gas"`
+	GasUsed         uint64         `json:"gas_used"`
+	Input           []byte         `json:"input"`
+	Output          []byte         `json:"output"`
+	Value           *big.Int       `json:"value"`
+	From            common.Address `json:"from"`
+	To              common.Address `json:"to"`
+	ContractAddress common.Address `json:"contract_address"`
+	Timestamp       uint64         `json:"timestamp"`
+	ErrorMsg        string         `json:"error_msg"`
 }
 
 type TransactionAction struct {
-	TransactionHash string   `json:"transaction_hash"`
-	Selector        string   `json:"selector"`
-	Type            string   `json:"type"`
-	From            string   `json:"from"`
-	To              string   `json:"to"`
-	Value           *big.Int `json:"value"`
-	Input           []byte   `json:"input"`
-	Status          int      `json:"status"`
+	TransactionHash common.Hash    `json:"transaction_hash"`
+	Selector        string         `json:"selector"`
+	Type            string         `json:"type"`
+	From            common.Address `json:"from"`
+	To              common.Address `json:"to"`
+	Value           *big.Int       `json:"value"`
+	Input           []byte         `json:"input"`
+	Status          int            `json:"status"`
 }
 
-const zeroAddress = "0x0000000000000000000000000000000000000000"
+var zeroAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")

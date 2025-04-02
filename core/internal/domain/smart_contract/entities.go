@@ -5,7 +5,7 @@ type SmartContract struct {
 	Name             string
 	CompilerVersion  string
 	SourceCode       string
-	Abi              string
+	ABI              string
 	CompilerSettings string
 	VerifiedByEth    bool
 	EvmVersion       string
@@ -17,7 +17,7 @@ func (s *SmartContract) ToMap() map[string]interface{} {
 		"name":              s.Name,
 		"compiler_version":  s.CompilerVersion,
 		"source_code":       s.SourceCode,
-		"abi":               s.Abi,
+		"abi":               s.ABI,
 		"compiler_settings": s.CompilerSettings,
 		"verified_by_eth":   s.VerifiedByEth,
 		"evm_version":       s.EvmVersion,
