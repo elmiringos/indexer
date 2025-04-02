@@ -42,15 +42,15 @@ func (p *BlockProcessor) Process(ctx context.Context, data []byte) error {
 	p.log.Info("Block saved successfully", zap.Any("block_number", block.Number))
 
 	// Save block hash for transaction, withdrawal and reward for sync queues
-	if err := p.blockRepository.SaveBlockHashForTransaction(ctx, block.Hash); err != nil {
+	if err := p.blockRepository.SaveBlockHashForTransaction(ctx, block.Hash, block.TransactionsCount); err != nil {
 		return fmt.Errorf("%s: %w", ErrFailedToSaveBlockHash, err)
 	}
 
-	if err := p.blockRepository.SaveBlockHashForWithdrawal(ctx, block.Hash); err != nil {
+	if err := p.blockRepository.SaveBlockHashForWithdrawal(ctx, block.Hash, block.WithdrawalsCount); err != nil {
 		return fmt.Errorf("%s: %w", ErrFailedToSaveBlockHash, err)
 	}
 
-	if err := p.blockRepository.SaveBlockHashForReward(ctx, block.Hash); err != nil {
+	if err := p.blockRepository.SaveBlockHashForReward(ctx, block.Hash, 1); err != nil {
 		return fmt.Errorf("%s: %w", ErrFailedToSaveBlockHash, err)
 	}
 
