@@ -6,19 +6,18 @@ import (
 	"fmt"
 
 	"github.com/elmiringos/indexer/indexer-core/internal/domain/block"
-	"github.com/elmiringos/indexer/indexer-core/pkg/redis"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/zap"
 )
 
 type BlockRepository struct {
 	db    *sql.DB
-	redis *redis.Client
+	store KVStorage
 	log   *zap.Logger
 }
 
-func NewBlockRepository(db *sql.DB, redis *redis.Client, log *zap.Logger) *BlockRepository {
-	return &BlockRepository{db: db, redis: redis, log: log}
+func NewBlockRepository(db *sql.DB, store KVStorage, log *zap.Logger) *BlockRepository {
+	return &BlockRepository{db: db, store: store, log: log}
 }
 
 func (r *BlockRepository) GetCurrentBlock(ctx context.Context) (*block.Block, error) {
@@ -60,59 +59,71 @@ func makeRewardKey(hash common.Hash) string {
 	return fmt.Sprintf("block:%s:reward", hash.Hex())
 }
 
-func (r *BlockRepository) SaveBlockHashForTransaction(ctx context.Context, hash common.Hash) error {
+func (r *BlockRepository) SaveBlockHashForTransaction(ctx context.Context, hash common.Hash, transactionCount int) error {
 	r.log.Debug("Saving block hash for transaction", zap.String("hash", hash.Hex()))
-	return r.redis.Set(makeTransactionKey(hash), []byte(hash.Hex()))
+	return r.store.SetInt(ctx, makeTransactionKey(hash), transactionCount)
 }
 
-func (r *BlockRepository) SaveBlockHashForWithdrawal(ctx context.Context, hash common.Hash) error {
+func (r *BlockRepository) SaveBlockHashForWithdrawal(ctx context.Context, hash common.Hash, withdrawalCount int) error {
 	r.log.Debug("Saving block hash for withdrawal", zap.String("hash", hash.Hex()))
-	return r.redis.Set(makeWithdrawalKey(hash), []byte(hash.Hex()))
+	return r.store.SetInt(ctx, makeWithdrawalKey(hash), withdrawalCount)
 }
 
-func (r *BlockRepository) SaveBlockHashForReward(ctx context.Context, hash common.Hash) error {
+func (r *BlockRepository) SaveBlockHashForReward(ctx context.Context, hash common.Hash, rewardCount int) error {
 	r.log.Debug("Saving block hash for reward", zap.String("hash", hash.Hex()))
-	return r.redis.Set(makeRewardKey(hash), []byte(hash.Hex()))
+	return r.store.SetInt(ctx, makeRewardKey(hash), rewardCount)
 }
 
 func (r *BlockRepository) DeleteBlockHashForTransaction(ctx context.Context, hash common.Hash) error {
 	r.log.Debug("Deleting block hash for transaction", zap.String("hash", hash.Hex()))
-	return r.redis.Delete(makeTransactionKey(hash))
+	return r.store.Delete(ctx, makeTransactionKey(hash))
 }
 
 func (r *BlockRepository) DeleteBlockHashForWithdrawal(ctx context.Context, hash common.Hash) error {
 	r.log.Debug("Deleting block hash for withdrawal", zap.String("hash", hash.Hex()))
-	return r.redis.Delete(makeWithdrawalKey(hash))
+	return r.store.Delete(ctx, makeWithdrawalKey(hash))
 }
 
 func (r *BlockRepository) DeleteBlockHashForReward(ctx context.Context, hash common.Hash) error {
 	r.log.Debug("Deleting block hash for reward", zap.String("hash", hash.Hex()))
-	return r.redis.Delete(makeRewardKey(hash))
+	return r.store.Delete(ctx, makeRewardKey(hash))
 }
 
 func (r *BlockRepository) CheckBlockExistsForTransaction(ctx context.Context, hash common.Hash) (bool, error) {
-	exists, err := r.redis.Get(makeTransactionKey(hash))
+	exists, err := r.store.GetInt(ctx, makeTransactionKey(hash))
 	if err != nil {
 		return false, err
 	}
 
-	return exists != nil, nil
+	return exists != 0, nil
 }
 
 func (r *BlockRepository) CheckBlockExistsForWithdrawal(ctx context.Context, hash common.Hash) (bool, error) {
-	exists, err := r.redis.Get(makeWithdrawalKey(hash))
+	exists, err := r.store.GetInt(ctx, makeWithdrawalKey(hash))
 	if err != nil {
 		return false, err
 	}
 
-	return exists != nil, nil
+	return exists != 0, nil
 }
 
 func (r *BlockRepository) CheckBlockExistsForReward(ctx context.Context, hash common.Hash) (bool, error) {
-	exists, err := r.redis.Get(makeRewardKey(hash))
+	exists, err := r.store.GetInt(ctx, makeRewardKey(hash))
 	if err != nil {
 		return false, err
 	}
 
-	return exists != nil, nil
+	return exists != 0, nil
+}
+
+func (r *BlockRepository) DecrementBlockHashRewardCount(ctx context.Context, hash common.Hash) error {
+	return r.store.DecrementAndMaybeDelete(ctx, makeRewardKey(hash))
+}
+
+func (r *BlockRepository) DecrementBlockHashTransactionCount(ctx context.Context, hash common.Hash) error {
+	return r.store.DecrementAndMaybeDelete(ctx, makeTransactionKey(hash))
+}
+
+func (r *BlockRepository) DecrementBlockHashWithdrawalCount(ctx context.Context, hash common.Hash) error {
+	return r.store.DecrementAndMaybeDelete(ctx, makeWithdrawalKey(hash))
 }

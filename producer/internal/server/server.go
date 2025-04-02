@@ -142,7 +142,7 @@ func (s *Server) SyncStartingBlock(configBlockStartNumber *big.Int) {
 			zap.Any("startingBlockNumber", configBlockStartNumber),
 		)
 	} else if currentBlockNumber.Cmp(configBlockStartNumber) > 0 {
-		s.log.Fatal(
+		s.log.Warn(
 			"Current block number is greater than starting block number. This is not possible. Please check the database and the core service.",
 			zap.Any("currentBlockNumber", currentBlockNumber),
 			zap.Any("startingBlockNumber", configBlockStartNumber),

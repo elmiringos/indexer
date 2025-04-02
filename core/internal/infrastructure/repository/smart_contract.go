@@ -17,17 +17,9 @@ func NewSmartContractRepository(db *sql.DB, redis *redis.Client) *SmartContractR
 	return &SmartContractRepository{db: db, redis: redis}
 }
 
-func (r *SmartContractRepository) SaveSmartContract(ctx context.Context, smartContract *smartcontract.SmartContract) (string, error) {
+func (r *SmartContractRepository) SaveSmartContract(ctx context.Context, smartContract *smartcontract.SmartContract) error {
 	query := `insert into smart_contract (hash, block_hash, from_address, to_address, value, gas, gas_price, input, nonce, timestamp) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err := r.db.ExecContext(ctx, query, smartContract.AddressHash, smartContract.Name, smartContract.CompilerVersion, smartContract.SourceCode, smartContract.Abi, smartContract.CompilerSettings, smartContract.VerifiedByEth, smartContract.EvmVersion)
+	_, err := r.db.ExecContext(ctx, query, smartContract.AddressHash, smartContract.Name, smartContract.CompilerVersion, smartContract.SourceCode, smartContract.ABI, smartContract.CompilerSettings, smartContract.VerifiedByEth, smartContract.EvmVersion)
 
-	return smartContract.AddressHash, err
-}
-
-func (r *SmartContractRepository) SaveSmartContractAddress(ctx context.Context, addressHash string) error {
-	return r.redis.Set(addressHash, []byte(""))
-}
-
-func (r *SmartContractRepository) DeleteSmartContractAddress(ctx context.Context, addressHash string) error {
-	return r.redis.Delete(addressHash)
+	return err
 }

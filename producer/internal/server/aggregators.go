@@ -71,7 +71,8 @@ func (s *Server) aggregateTransactions(channel *amqp.Channel, block *types.Block
 		}
 
 		// publish transaction message
-		transactionMessage, err := s.blockchainProcessor.ConvertTransactionToTransaction(transaction, block.Hash(), transactionReceipt, index)
+		transactionMessage, err := s.blockchainProcessor.ConvertTransactionToTransaction(
+			transaction, block.Hash(), transactionReceipt, index)
 		if err != nil {
 			s.log.Error("error in converting transaction to custom type", zap.Error(err))
 			return 0, err
@@ -115,7 +116,7 @@ func (s *Server) aggregateTransactions(channel *amqp.Channel, block *types.Block
 		}
 
 		// aggregate token events
-		tokenEvents := s.blockchainProcessor.GetTokenEvents(transactionReceipt)
+		tokenEvents := s.blockchainProcessor.GetTokenEvents(transactionReceipt, transaction.Hash())
 		err = s.aggregateTokenEvents(channel, tokenEvents)
 		if err != nil {
 			s.log.Error("error in aggregating token events", zap.Error(err))
@@ -144,13 +145,7 @@ func (s *Server) aggregateWithdrawals(channel *amqp.Channel, withdrawals []*type
 
 func (s *Server) aggregateTokenEvents(channel *amqp.Channel, tokenEvents []*blockchain.TokenEvent) error {
 	for _, tokenEvent := range tokenEvents {
-		tokenEventMessage, err := json.Marshal(tokenEvent)
-		if err != nil {
-			s.log.Error("error in marshalling token event message", zap.Error(err))
-			return err
-		}
-
-		err = s.publisher.PublishMessage(channel, rabbitmq.TokenEventExchange, rabbitmq.TokenEventRoute, tokenEventMessage)
+		err := s.publisher.PublishMessage(channel, rabbitmq.TokenEventExchange, rabbitmq.TokenEventRoute, tokenEvent)
 		if err != nil {
 			s.log.Error("error in publishing token event message to broker", zap.Error(err))
 			return err
@@ -162,17 +157,13 @@ func (s *Server) aggregateTokenEvents(channel *amqp.Channel, tokenEvents []*bloc
 
 func (s *Server) aggragateTransactionLogs(channel *amqp.Channel, transactionLogs []*types.Log) error {
 	for _, transactionLog := range transactionLogs {
-		transactionLogMessage, err := json.Marshal(transactionLog)
-		if err != nil {
-			s.log.Error("error in marshalling transaction log message", zap.Error(err))
-			return err
-		}
-
-		err = s.publisher.PublishMessage(channel, rabbitmq.TransactionLogExchange, rabbitmq.TransactionLogRoute, transactionLogMessage)
+		err := s.publisher.PublishMessage(channel, rabbitmq.TransactionLogExchange, rabbitmq.TransactionLogRoute, transactionLog)
 		if err != nil {
 			s.log.Error("error in publishing transaction log message to broker", zap.Error(err))
 			return err
 		}
+
+		s.log.Info("Publish transaction log", zap.Any("message", transactionLog))
 	}
 
 	return nil
