@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/elmiringos/indexer/indexer-core/config"
@@ -34,27 +35,41 @@ func NewClient(cfg *config.Config, log *zap.Logger) *Client {
 	return &Client{client: client}
 }
 
-func (r *Client) Get(key string) ([]byte, error) {
-	val, err := r.client.Get(context.Background(), key).Result()
+func (r *Client) GetInt(ctx context.Context, key string) (int, error) {
+	val, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
-		return nil, nil
+		return 0, nil
 	}
+
+	fmt.Println("REDIS", val, key)
+
+	intVal, err := strconv.Atoi(val)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return []byte(val), nil
+
+	return intVal, nil
 }
 
-func (r *Client) Set(key string, val []byte) error {
-	return r.client.Set(context.Background(), key, val, 0).Err()
+func (r *Client) SetInt(ctx context.Context, key string, count int) error {
+	return r.client.SetNX(ctx, key, count, 0).Err()
 }
 
-func (r *Client) SetWithTTL(key string, val []byte, exp time.Duration) error {
-	return r.client.Set(context.Background(), key, val, exp).Err()
+var decrAndMaybeDeleteScript = redis.NewScript(`
+    local val = redis.call("DECR", KEYS[1])
+    if val <= 0 then
+        redis.call("DEL", KEYS[1])
+    end
+    return val
+`)
+
+func (r *Client) DecrementAndMaybeDelete(ctx context.Context, key string) error {
+	_, err := decrAndMaybeDeleteScript.Run(ctx, r.client, []string{key}).Result()
+	return err
 }
 
-func (r *Client) Delete(key string) error {
-	return r.client.Del(context.Background(), key).Err()
+func (r *Client) Delete(ctx context.Context, key string) error {
+	return r.client.Del(ctx, key).Err()
 }
 
 func (r *Client) Reset() error {
