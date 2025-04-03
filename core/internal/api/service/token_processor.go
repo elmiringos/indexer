@@ -53,22 +53,6 @@ func (p *TokenProcessor) Process(ctx context.Context, data []byte) error {
 			return fmt.Errorf("error saving/updating token: %w", err)
 		}
 
-		// Save contract if it's a mint event (first time interacting with this contract)
-		contract := &smartcontract.SmartContract{
-			AddressHash:     tokenEvent.From.String(),
-			Name:            metadata["name"].(string),
-			ABI:             metadata["abi"].(string), // Assuming ABI exists in metadata
-			CompilerVersion: metadata["compiler_version"].(string),
-			SourceCode:      metadata["source_code"].(string),
-			VerifiedByEth:   true,
-			EvmVersion:      "latest",
-		}
-
-		// Save the contract
-		err = p.smartContractRepository.SaveSmartContract(ctx, contract)
-		if err != nil {
-			return fmt.Errorf("error saving contract: %w", err)
-		}
 	}
 
 	// Process TokenInstance Entity for ERC-721 and ERC-1155 (if applicable)
@@ -98,6 +82,23 @@ func (p *TokenProcessor) Process(ctx context.Context, data []byte) error {
 	err := p.tokenRepository.SaveTokenTransfer(ctx, tokenTransfer)
 	if err != nil {
 		return fmt.Errorf("error saving token transfer: %w", err)
+	}
+
+	if tokenEvent.SmartContractDeployed {
+		contract := &smartcontract.SmartContract{
+			AddressHash:     tokenEvent.From.String(),
+			Name:            metadata["name"].(string),
+			CompilerVersion: metadata["compiler_version"].(string),
+			SourceCode:      metadata["smartcontract_bytecode"].(string),
+			VerifiedByEth:   true,
+			EvmVersion:      "latest",
+		}
+
+		// Save the contract
+		err = p.smartContractRepository.SaveSmartContract(ctx, contract)
+		if err != nil {
+			return fmt.Errorf("error saving contract: %w", err)
+		}
 	}
 
 	return nil

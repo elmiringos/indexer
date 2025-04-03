@@ -12,15 +12,16 @@ type TokenMetadata map[string]interface{}
 
 // TokenEvent represents a token event
 type TokenEvent struct {
-	TransactionHash common.Hash    `json:"transaction_hash"`
-	LogIndex        int            `json:"log_indexl"`
-	From            common.Address `json:"from"`
-	To              common.Address `json:"to"`
-	Value           domain.BigInt  `json:"value"`
-	TokenId         domain.BigInt  `json:"token_id"`
-	TokenMetadata   *TokenMetadata `json:"token_metadata"`
-	IsMint          bool           `json:"is_mint"`
-	IsBurn          bool           `json:"is_burn"`
+	TransactionHash       common.Hash    `json:"transaction_hash"`
+	LogIndex              int            `json:"log_indexl"`
+	From                  common.Address `json:"from"`
+	To                    common.Address `json:"to"`
+	Value                 domain.BigInt  `json:"value"`
+	TokenId               domain.BigInt  `json:"token_id"`
+	TokenMetadata         *TokenMetadata `json:"token_metadata"`
+	IsMint                bool           `json:"is_mint"`
+	IsBurn                bool           `json:"is_burn"`
+	SmartContractDeployed bool           `json:"smart_contract_deployed"`
 }
 
 type Token struct {

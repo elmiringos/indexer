@@ -9,6 +9,10 @@ import (
 // Custom BigInt for marshalling and unmarshalling
 type BigInt big.Int
 
+func (i BigInt) String() string {
+	return (*big.Int)(&i).String()
+}
+
 func (i BigInt) MarshalJSON() ([]byte, error) {
 	i2 := big.Int(i)
 	return []byte(fmt.Sprintf(`"%s"`, i2.String())), nil

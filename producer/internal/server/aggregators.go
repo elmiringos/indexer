@@ -150,6 +150,8 @@ func (s *Server) aggregateTokenEvents(channel *amqp.Channel, tokenEvents []*bloc
 			s.log.Error("error in publishing token event message to broker", zap.Error(err))
 			return err
 		}
+
+		s.log.Debug("published token event to broker", zap.Any("token_event", tokenEvent))
 	}
 
 	return nil

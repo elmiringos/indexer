@@ -142,15 +142,16 @@ type TokenMetadata map[string]interface{}
 
 // TokenEvent represents a token event
 type TokenEvent struct {
-	TransactionHash common.Hash    `json:"transaction_hash"`
-	LogIndex        uint           `json:"log_index"`
-	From            common.Address `json:"from"`
-	To              common.Address `json:"to"`
-	Value           BigInt         `json:"value"`
-	TokenId         BigInt         `json:"token_id"`
-	TokenMetadata   TokenMetadata  `json:"token_metadata"`
-	IsMint          bool           `json:"is_mint"`
-	IsBurn          bool           `json:"is_burn"`
+	TransactionHash       common.Hash    `json:"transaction_hash"`
+	LogIndex              uint           `json:"log_index"`
+	From                  common.Address `json:"from"`
+	To                    common.Address `json:"to"`
+	Value                 BigInt         `json:"value"`
+	TokenId               BigInt         `json:"token_id"`
+	TokenMetadata         TokenMetadata  `json:"token_metadata"`
+	IsMint                bool           `json:"is_mint"`
+	IsBurn                bool           `json:"is_burn"`
+	SmartContractDeployed bool           `json:"smart_contract_deployed"`
 }
 
 // InternalTransaction represents an internal transaction
