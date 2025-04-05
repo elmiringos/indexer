@@ -41,8 +41,6 @@ func (r *Client) GetInt(ctx context.Context, key string) (int, error) {
 		return 0, nil
 	}
 
-	fmt.Println("REDIS", val, key)
-
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
 		return 0, err

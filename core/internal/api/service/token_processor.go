@@ -44,7 +44,7 @@ func (p *TokenProcessor) Process(ctx context.Context, data []byte) error {
 			Name:        metadata["name"].(string),
 			Symbol:      metadata["symbol"].(string),
 			TotalSupply: tokenEvent.Value,
-			Decimals:    int(metadata["decimals"].(float64)),
+			Decimals:    metadata["decimals"].(int),
 		}
 
 		// Save or update Token
@@ -88,7 +88,7 @@ func (p *TokenProcessor) Process(ctx context.Context, data []byte) error {
 		contract := &smartcontract.SmartContract{
 			AddressHash:     tokenEvent.From.String(),
 			Name:            metadata["name"].(string),
-			CompilerVersion: metadata["compiler_version"].(string),
+			CompilerVersion: "not_imlemented",
 			SourceCode:      metadata["smartcontract_bytecode"].(string),
 			VerifiedByEth:   true,
 			EvmVersion:      "latest",
