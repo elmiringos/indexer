@@ -37,14 +37,23 @@ func (p *TokenProcessor) Process(ctx context.Context, data []byte) error {
 
 	metadata := *tokenEvent.TokenMetadata
 
-	if tokenEvent.IsMint {
+	if tokenEvent.SmartContractDeployed {
+		p.log.Debug("Parsing metadata", zap.Any("metadata", metadata))
+
+		decimals, ok := metadata["decimals"].(float64)
+		if !ok {
+			decimals = 0
+		}
+
+		p.log.Debug("token event", zap.Any("d", tokenEvent))
+
 		// Process Token Entity
 		tokenEntity := &token.Token{
-			Address:     tokenEvent.From, // Assuming AddressHash is based on the `From` address
+			Address:     tokenEvent.Address,
 			Name:        metadata["name"].(string),
 			Symbol:      metadata["symbol"].(string),
 			TotalSupply: tokenEvent.Value,
-			Decimals:    metadata["decimals"].(int),
+			Decimals:    int(decimals),
 		}
 
 		// Save or update Token
@@ -53,40 +62,8 @@ func (p *TokenProcessor) Process(ctx context.Context, data []byte) error {
 			return fmt.Errorf("error saving/updating token: %w", err)
 		}
 
-	}
-
-	// Process TokenInstance Entity for ERC-721 and ERC-1155 (if applicable)
-	if tokenEvent.TokenId.String() != "0" { // ERC-721 or ERC-1155
-		tokenInstance := &token.TokenInstance{
-			TokenId:              tokenEvent.TokenId,
-			TokenContractAddress: tokenEvent.From,
-			OwnerAddress:         tokenEvent.To,
-		}
-
-		err := p.tokenRepository.SaveTokenInstance(ctx, tokenInstance)
-		if err != nil {
-			return fmt.Errorf("error saving token instance: %w", err)
-		}
-	}
-
-	// Process TokenTransfer Entity
-	tokenTransfer := &token.TokenTransfer{
-		TransactionHash:      tokenEvent.TransactionHash.String(),
-		LogIndex:             tokenEvent.LogIndex,
-		From:                 tokenEvent.From,
-		To:                   tokenEvent.To,
-		TokenContractAddress: tokenEvent.From,
-		Amount:               tokenEvent.Value,
-	}
-
-	err := p.tokenRepository.SaveTokenTransfer(ctx, tokenTransfer)
-	if err != nil {
-		return fmt.Errorf("error saving token transfer: %w", err)
-	}
-
-	if tokenEvent.SmartContractDeployed {
 		contract := &smartcontract.SmartContract{
-			AddressHash:     tokenEvent.From.String(),
+			AddressHash:     tokenEvent.Address,
 			Name:            metadata["name"].(string),
 			CompilerVersion: "not_imlemented",
 			SourceCode:      metadata["smartcontract_bytecode"].(string),
@@ -99,6 +76,35 @@ func (p *TokenProcessor) Process(ctx context.Context, data []byte) error {
 		if err != nil {
 			return fmt.Errorf("error saving contract: %w", err)
 		}
+	}
+
+	// Process TokenInstance Entity for ERC-721 and ERC-1155 (if applicable)
+	if tokenEvent.TokenId.String() != "0" { // ERC-721 or ERC-1155
+		tokenInstance := &token.TokenInstance{
+			TokenId:              tokenEvent.TokenId,
+			TokenContractAddress: tokenEvent.Address,
+			OwnerAddress:         tokenEvent.To,
+		}
+
+		err := p.tokenRepository.SaveOrUpdateTokenInstance(ctx, tokenInstance)
+		if err != nil {
+			return fmt.Errorf("error saving token instance: %w", err)
+		}
+	}
+
+	// Process TokenTransfer Entity
+	tokenTransfer := &token.TokenTransfer{
+		TransactionHash:      tokenEvent.TransactionHash,
+		LogIndex:             tokenEvent.LogIndex,
+		From:                 tokenEvent.From,
+		To:                   tokenEvent.To,
+		TokenContractAddress: tokenEvent.From,
+		Amount:               tokenEvent.Value,
+	}
+
+	err := p.tokenRepository.SaveTokenTransfer(ctx, tokenTransfer)
+	if err != nil {
+		return fmt.Errorf("error saving token transfer: %w", err)
 	}
 
 	return nil

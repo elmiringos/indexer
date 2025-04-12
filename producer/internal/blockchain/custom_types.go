@@ -109,6 +109,29 @@ func (p *BlockchainProcessor) ConvertTransactionToTransaction(
 	return transactionMessage, nil
 }
 
+// Transaction log represents a log for specific transaction and contract event
+type TransactionLog struct {
+	Address          common.Address `json:"address"`
+	Topics           []common.Hash  `json:"topics"`
+	TransactionHash  common.Hash    `json:"transactionHash"`
+	BlockHash        common.Hash    `json:"blockHash"`
+	TransactionIndex uint           `json:"transactionIndex"`
+	Index            uint           `json:"logIndex"`
+	Data             []byte         `json:"data"`
+}
+
+func ConvertTransactionLogToTransactionLog(txLog *types.Log) *TransactionLog {
+	return &TransactionLog{
+		Address:          txLog.Address,
+		Topics:           txLog.Topics,
+		TransactionHash:  txLog.TxHash,
+		BlockHash:        txLog.BlockHash,
+		TransactionIndex: txLog.TxIndex,
+		Index:            txLog.Index,
+		Data:             txLog.Data,
+	}
+}
+
 // Reward represents a reward for a validator
 type Reward struct {
 	BlockHash common.Hash    `json:"block_hash"`
@@ -142,6 +165,7 @@ type TokenMetadata map[string]interface{}
 
 // TokenEvent represents a token event
 type TokenEvent struct {
+	Address               common.Address `json:"address"`
 	TransactionHash       common.Hash    `json:"transaction_hash"`
 	LogIndex              uint           `json:"log_index"`
 	From                  common.Address `json:"from"`

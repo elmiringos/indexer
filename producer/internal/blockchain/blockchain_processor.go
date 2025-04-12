@@ -324,6 +324,7 @@ func (p *BlockchainProcessor) GetTokenEvents(receipt *types.Receipt, transaction
 				// Get Token Metadata for ERC-20 token
 				metadata := p.getERC20Metadata(log.Address)
 
+				event.Address = receipt.ContractAddress
 				event.TransactionHash = transactionHash
 				event.LogIndex = log.Index
 				event.From = from
@@ -343,6 +344,7 @@ func (p *BlockchainProcessor) GetTokenEvents(receipt *types.Receipt, transaction
 				// Get Token Metadata for ERC-721 token
 				metadata := p.getERC721Metadata(log.Address, tokenId)
 
+				event.Address = receipt.ContractAddress
 				event.TransactionHash = transactionHash
 				event.LogIndex = log.Index
 				event.TokenId = BigInt(*tokenId)
@@ -363,6 +365,7 @@ func (p *BlockchainProcessor) GetTokenEvents(receipt *types.Receipt, transaction
 				// Get Token Metadata for ERC-1155 token
 				metadata := p.getERC1155Metadata(log.Address, tokenId)
 
+				event.Address = receipt.ContractAddress
 				event.TransactionHash = transactionHash
 				event.LogIndex = log.Index
 				event.TokenId = BigInt(*tokenId)

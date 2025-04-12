@@ -134,21 +134,38 @@ EXECUTE FUNCTION update_modified_column();
 
 -- tranasction_log
 CREATE TABLE IF NOT EXISTS "transaction_log" (
-    "index" INT,
-    "transaction_hash" BYTEA NOT NULL,
-    "first_topic" BYTEA,
-    "second_topic" BYTEA,
-    "third_topic" BYTEA,
-    "fourth_topic" BYTEA,
     "address" BYTEA NOT NULL,
+    "transaction_hash" BYTEA NOT NULL,
+    "block_hash" BYTEA NOT NULL,  
+    "transaction_index" INT NOT NULL,
+    "log_index" INT NOT NULL,
+    "data" BYTEA,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY ("index"),
+    PRIMARY KEY ("transaction_hash", "log_index"),
     FOREIGN KEY ("transaction_hash") REFERENCES "transaction"("hash") ON DELETE CASCADE
 );
 
 CREATE TRIGGER update_user_modtime
 BEFORE UPDATE ON "transaction_log"
+FOR EACH ROW
+EXECUTE FUNCTION update_modified_column();
+
+
+-- transaction_log_topic
+create TABLE IF NOT EXISTS "transaction_log_topic" (
+    "transaction_hash" BYTEA NOT NULL,
+    "log_index" INT NOT NULL,
+    "topic_index" INT NOT NULL,
+    "topic" BYTEA NULL,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY ("transaction_hash", "log_index", "topic_index"),
+    FOREIGN KEY ("transaction_hash", "log_index") REFERENCES "transaction_log"("transaction_hash", "log_index") ON DELETE CASCADE
+);
+
+CREATE TRIGGER update_user_modtime
+BEFORE UPDATE ON "transaction_log_topic"
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
 
@@ -163,8 +180,7 @@ CREATE TABLE IF NOT EXISTS "transaction_action" (
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY ("transaction_hash", "log_index"),
-    FOREIGN KEY ("transaction_hash") REFERENCES "transaction"("hash") ON DELETE CASCADE,
-    FOREIGN KEY ("log_index") REFERENCES "transaction_log"("index") ON DELETE CASCADE
+    FOREIGN KEY ("transaction_hash", "log_index") REFERENCES "transaction_log"("transaction_hash", "log_index") ON DELETE CASCADE
 );
 
 CREATE TRIGGER update_user_modtime
@@ -178,9 +194,8 @@ CREATE TABLE IF NOT EXISTS "token" (
     "address_hash" BYTEA PRIMARY KEY,
     "symbol" VARCHAR NOT NULL,
     "name" VARCHAR NOT NULL,
-    "total_supply" BIGINT,
+    "total_supply" TEXT,
     "decimals" INT NOT NULL,
-    "holder_count" BIGINT,
     "fiat_value" NUMERIC,
     "circulation_market_cap" NUMERIC,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -200,7 +215,7 @@ CREATE TABLE IF NOT EXISTS "token_transfer" (
     "from_address" BYTEA NOT NULL,
     "to_address" BYTEA NOT NULL,
     "token_contract_address_hash" BYTEA NOT NULL,
-    "amount" NUMERIC NOT NULL,
+    "amount" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY ("transaction_hash", "log_index")
@@ -214,13 +229,13 @@ EXECUTE FUNCTION update_modified_column();
 
 -- token_instance
 CREATE TABLE IF NOT EXISTS "token_instance" (
+    "token_contract_address_hash" BYTEA,
     "token_id" BIGINT,
-    "token_contract_address_hash" BYTEA NOT NULL,
     "owner_address_hash" BYTEA NOT NULL,
     "metadata" JSONB,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY ("token_id"),
+    PRIMARY KEY ("token_id", "token_contract_address_hash"),
     FOREIGN KEY ("token_contract_address_hash") REFERENCES "token"("address_hash") ON DELETE CASCADE
 );
 

@@ -159,7 +159,9 @@ func (s *Server) aggregateTokenEvents(channel *amqp.Channel, tokenEvents []*bloc
 
 func (s *Server) aggragateTransactionLogs(channel *amqp.Channel, transactionLogs []*types.Log) error {
 	for _, transactionLog := range transactionLogs {
-		err := s.publisher.PublishMessage(channel, rabbitmq.TransactionLogExchange, rabbitmq.TransactionLogRoute, transactionLog)
+		transactionLogMessage := blockchain.ConvertTransactionLogToTransactionLog(transactionLog)
+
+		err := s.publisher.PublishMessage(channel, rabbitmq.TransactionLogExchange, rabbitmq.TransactionLogRoute, transactionLogMessage)
 		if err != nil {
 			s.log.Error("error in publishing transaction log message to broker", zap.Error(err))
 			return err

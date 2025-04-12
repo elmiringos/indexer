@@ -41,10 +41,48 @@ func (r *TransactionRepository) SaveTransaction(ctx context.Context, tx *transac
 }
 
 func (r *TransactionRepository) SaveTransactionLog(ctx context.Context, txLog *transaction.TransactionLog) error {
-	query := `insert into transaction_log (transaction_hash, index, first_topic, second_topic, third_topic, fourth_topic, address) values ($1, $2, $3, $4, $5, $6, $7)`
-	_, err := r.db.ExecContext(ctx, query, txLog.TransactionHash, txLog.Index, txLog.FirstTopic, txLog.SecondTopic, txLog.ThirdTopic, txLog.FourthTopic, txLog.AddressHash)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
 
-	return err
+	logQuery := `
+		INSERT INTO transaction_log (
+			address, transaction_hash, block_hash, transaction_index, log_index, data  
+		) VALUES ($1, $2, $3, $4, $5, $6)`
+
+	_, err = tx.ExecContext(ctx, logQuery,
+		txLog.Address,
+		txLog.TransactionHash,
+		txLog.BlockHash,
+		txLog.TransactionIndex,
+		txLog.Index,
+		txLog.Data,
+	)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	topicQuery := `
+		INSERT INTO transaction_log_topic (
+			transaction_hash, log_index, topic_index, topic
+		) VALUES ($1, $2, $3, $4)`
+
+	for i, topic := range txLog.Topics {
+		_, err := tx.ExecContext(ctx, topicQuery,
+			txLog.TransactionHash,
+			txLog.Index,
+			i,
+			topic,
+		)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *TransactionRepository) SaveTransactionAction(ctx context.Context, txAction *transaction.TransactionAction) error {

@@ -47,24 +47,24 @@ func MakeSlice(transactions []*Transaction) []map[string]interface{} {
 }
 
 type TransactionLog struct {
-	Index           int
-	TransactionHash common.Hash
-	FirstTopic      string
-	SecondTopic     string
-	ThirdTopic      string
-	FourthTopic     string
-	AddressHash     string
+	Address          common.Address `json:"address"`
+	Topics           []common.Hash  `json:"topics"`
+	TransactionHash  common.Hash    `json:"transactionHash"`
+	BlockHash        common.Hash    `json:"blockHash"`
+	TransactionIndex uint           `json:"transactionIndex"`
+	Index            uint           `json:"logIndex"`
+	Data             []byte         `json:"data"`
 }
 
 func (t *TransactionLog) ToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"index":            t.Index,
-		"transaction_hash": t.TransactionHash,
-		"first_topic":      t.FirstTopic,
-		"second_topic":     t.SecondTopic,
-		"third_topic":      t.ThirdTopic,
-		"fourth_topic":     t.FourthTopic,
-		"address_hash":     t.AddressHash,
+		"address":           t.Address,
+		"topics":            t.Topics,
+		"transaction_hash":  t.TransactionHash,
+		"block_has":         t.BlockHash,
+		"transaction_index": t.TransactionIndex,
+		"index":             t.Index,
+		"data":              t.Data,
 	}
 }
 

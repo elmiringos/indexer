@@ -12,8 +12,9 @@ type TokenMetadata map[string]interface{}
 
 // TokenEvent represents a token event
 type TokenEvent struct {
+	Address               common.Address `json:"address"`
 	TransactionHash       common.Hash    `json:"transaction_hash"`
-	LogIndex              int            `json:"log_indexl"`
+	LogIndex              int            `json:"log_index"`
 	From                  common.Address `json:"from"`
 	To                    common.Address `json:"to"`
 	Value                 domain.BigInt  `json:"value"`
@@ -30,7 +31,6 @@ type Token struct {
 	Symbol               string
 	TotalSupply          domain.BigInt
 	Decimals             int
-	HolderCount          int
 	FiatValue            domain.BigInt
 	CirculationMarketCap domain.BigInt
 }
@@ -42,7 +42,6 @@ func (t *Token) ToMap() map[string]interface{} {
 		"symbol":                 t.Symbol,
 		"total_supply":           t.TotalSupply,
 		"decimals":               t.Decimals,
-		"holder_count":           t.HolderCount,
 		"fiat_value":             t.FiatValue,
 		"circulation_market_cap": t.CirculationMarketCap,
 	}
@@ -58,7 +57,7 @@ func MakeTokenSlice(tokens []*Token) []map[string]interface{} {
 }
 
 type TokenTransfer struct {
-	TransactionHash      string
+	TransactionHash      common.Hash
 	LogIndex             int
 	From                 common.Address
 	To                   common.Address

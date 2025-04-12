@@ -51,22 +51,28 @@ func (p *WorkerPool) worker(id int, wg *sync.WaitGroup, msgs <-chan amqp091.Deli
 		p.log.Info("Worker processing message", zap.Int("worker_id", id))
 
 		err := p.processor.Process(context.Background(), msg.Body)
-
 		if err != nil {
-			p.log.Error("Failed to process message",
+			p.log.Error(
+				"Failed to process message",
 				zap.Error(err),
+				zap.Int("worker_id", id),
+			)
+
+			// Send nack with requeue=true to retry processing the message
+			if nackErr := msg.Nack(false, true); nackErr != nil {
+				p.log.Fatal("Error sending nack message", zap.Error(nackErr))
+			}
+			continue
+		}
+
+		// Acknowledge the message after successful processing
+		if ackErr := msg.Ack(false); ackErr != nil {
+			p.log.Error("Failed to acknowledge message",
+				zap.Error(ackErr),
 				zap.Int("worker_id", id))
 			continue
 		}
 
-		err = msg.Ack(false)
-		if err != nil {
-			p.log.Error("Failed to ack message",
-				zap.Error(err),
-				zap.Int("worker_id", id))
-			continue
-		}
-
-		p.log.Info("Message processed successfully", zap.Int("worker_id", id))
+		p.log.Info("Message processed successfully", zap.Int("worker_id", id), zap.String("msg_id", string(msg.MessageId)))
 	}
 }

@@ -1,7 +1,9 @@
 package smartcontract
 
+import "github.com/ethereum/go-ethereum/common"
+
 type SmartContract struct {
-	AddressHash      string
+	AddressHash      common.Address
 	Name             string
 	CompilerVersion  string
 	SourceCode       string

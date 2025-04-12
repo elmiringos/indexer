@@ -37,7 +37,7 @@ func NewServer(cfg *config.Config, db *postgres.Connection, redis *redis.Client,
 	rewardRepository := repository.NewRewardRepository(db.GetDb(), redis)
 	smartContractRepository := repository.NewSmartContractRepository(db.GetDb(), redis)
 	tokenRepository := repository.NewTokenRepository(db.GetDb(), redis)
-	transactionRepository := repository.NewTransactionRepository(db.GetDb(), redis)
+	transactionRepository := repository.NewTransactionRepository(db.GetDb(), redis, logger)
 	withdrawalRepository := repository.NewWithdrawalRepository(db.GetDb())
 
 	// Initialize consumer to message broker
@@ -47,8 +47,10 @@ func NewServer(cfg *config.Config, db *postgres.Connection, redis *redis.Client,
 	// Initialize queue channels and get messages
 	blockMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.BlockQueue)
 	transactionMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.TransactionQueue)
+	transactionLogMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.TransactionLogQueue)
 	rewardMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.RewardQueue)
 	withdrawalMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.WithdrawalQueue)
+	tokenEventMessages := consumer.Consume(consumer.CreateChannel(), rabbitmq.TokenEventQueue)
 
 	// Initialize service
 	coreService := service.NewCoreService(
@@ -76,6 +78,11 @@ func NewServer(cfg *config.Config, db *postgres.Connection, redis *redis.Client,
 	transactionWorkerPool := service.NewWorkerPool(transactionProcessor, logger, cfg.Server.Worker)
 	go transactionWorkerPool.Start(transactionMessages)
 
+	// // Transaction Log processor
+	transactionLogProcessor := service.NewTransactionLogProcessor(transactionRepository, logger)
+	transactionLogWorkerPool := service.NewWorkerPool(transactionLogProcessor, logger, cfg.Server.Worker)
+	go transactionLogWorkerPool.Start(transactionLogMessages)
+
 	// Reward processor
 	rewardProcessor := service.NewRewardProcessor(blockRepository, rewardRepository, logger)
 	rewardWorkerPool := service.NewWorkerPool(rewardProcessor, logger, cfg.Server.Worker)
@@ -85,6 +92,11 @@ func NewServer(cfg *config.Config, db *postgres.Connection, redis *redis.Client,
 	withdrawalProcessor := service.NewWithdrawalProcessor(blockRepository, withdrawalRepository, logger)
 	withdrawalWorkerPool := service.NewWorkerPool(withdrawalProcessor, logger, cfg.Server.Worker)
 	go withdrawalWorkerPool.Start(withdrawalMessages)
+
+	// Token event processor
+	tokenEventProcessor := service.NewTokenProccesor(tokenRepository, smartContractRepository, logger)
+	tokenEventWorkerPool := service.NewWorkerPool(tokenEventProcessor, logger, cfg.Server.Worker)
+	go tokenEventWorkerPool.Start(tokenEventMessages)
 
 	return &Server{
 		cfg:      cfg,

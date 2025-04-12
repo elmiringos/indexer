@@ -99,10 +99,10 @@ func NewTransactionLogProcessor(
 }
 
 func (p *TransactionLogProcessor) Process(ctx context.Context, data []byte) error {
-	p.log.Info("Data", zap.Any("d", data))
+	p.log.Info("Data", zap.String("json", string(data)))
 	transactionLog := &transaction.TransactionLog{}
 	if err := json.Unmarshal(data, transactionLog); err != nil {
-		return fmt.Errorf("%w: %w", ErrFailedToUnmarshalTransaction, err)
+		return fmt.Errorf("%w: %w", ErrFailedToUnmarshalTransactionLog, err)
 	}
 
 	transactionExist, err := p.transactionRepository.CheckTransactionExistForLog(ctx, transactionLog.TransactionHash)
@@ -118,7 +118,7 @@ func (p *TransactionLogProcessor) Process(ctx context.Context, data []byte) erro
 		return fmt.Errorf("%w: %s", ErrFailedToSaveTransactionLog, err)
 	}
 
-	p.log.Info("Transaction Log saved successfully", zap.Int("transaction_hash", transactionLog.Index))
+	p.log.Info("Transaction Log saved successfully", zap.Uint("transaction_log_index", transactionLog.Index))
 
 	if err := p.transactionRepository.DecrementTransactionLogCount(ctx, transactionLog.TransactionHash); err != nil {
 		return fmt.Errorf("%w: %s", ErrFailedToDecrementTransactionHash, err)
