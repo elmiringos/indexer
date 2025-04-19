@@ -12,43 +12,25 @@ type (
 		Server `yaml:"server"`
 		HTTP   `yaml:"http"`
 		Logger `yaml:"logger"`
-		Redis
-		EthNode `yaml:"eth_node"`
-		RMQ
+		PG
 	}
 
 	Server struct {
-		Name             string `yaml:"name"`
-		Version          string `yaml:"version"`
-		Stage            string `yaml:"stage"`
-		WorkerCount      int    `yaml:"worker_count"`
-		BlockStartNumber string `yaml:"block_start_number"`
-		RealTimeMode     bool   `yaml:"real_time_mode"`
-		CoreServiceUrl   string `yaml:"core_service_url"`
+		Name    string `env-required:"true" yaml:"name"    env:"APP_NAME"`
+		Version string `env-required:"true" yaml:"version" env:"APP_VERSION"`
+		Stage   string `env-required:"true" yaml:"stage"   env:"APP_STAGE"`
 	}
 
 	HTTP struct {
-		Port string `env-required:"false" yaml:"port"`
+		Port string `env-required:"true" yaml:"port" env:"HTTP_PORT"`
 	}
 
 	Logger struct {
 		File string `env-required:"false" yaml:"file" env:"LOG_FILE"`
 	}
 
-	Redis struct {
-		URL string `env-required:"true" env:"REDIS_URL"`
-	}
-
-	RMQ struct {
-		URL string `env-required:"true" env:"RMQ_URL"`
-	}
-
-	EthNode struct {
-		HttpURL string `env-required:"true" env:"ETH_HTTP_NODE_RPC"`
-		WsURL   string `env-required:"true" env:"ETH_WS_NODE_RPC"`
-		ApiKey  string `env:"ETH_RPC_KEY"`
-		Network string `yaml:"network_type"`
-		Trace   bool   `yaml:"trace_enabled"`
+	PG struct {
+		URL string `env-required:"true" env:"PG_URL"`
 	}
 )
 

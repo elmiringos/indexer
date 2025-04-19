@@ -1,0 +1,10 @@
+server:
+  name: "indexer-explorer:"
+  version: "0.0.1"
+  stage: "dev"
+
+http:
+  port: ":9092"
+
+logger:
+  file: "indexer-explorer"

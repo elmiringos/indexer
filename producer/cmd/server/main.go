@@ -61,20 +61,6 @@ func startProducerService(cfg *config.Config, log *zap.Logger) {
 	}
 	defer coreClient.Close()
 
-	// tx, err := blockchainProcessor.GetTransaction("0x0b1498d09e7e28e3b95b2ad313ff132e5b9fb503165672151d210a84e67487f3")
-	// if err != nil {
-	// 	log.Error("failed to get transaction", zap.Error(err))
-	// }
-
-	// fmt.Println(tx)
-
-	// trace, err := blockchainProcessor.GetTransactionTrace(tx)
-	// if err != nil {
-	// 	log.Error("failed to get transaction trace", zap.Error(err))
-	// }
-
-	// fmt.Println(trace)
-
 	server := server.NewServer(blockchainProcessor, publisher, coreClient, cfg)
 	server.StartBlockchainDataConsuming()
 }

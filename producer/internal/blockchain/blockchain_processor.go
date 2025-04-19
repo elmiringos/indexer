@@ -193,7 +193,6 @@ func (p *BlockchainProcessor) ListenNewBlocks(ctx context.Context, blocks chan<-
 			select {
 			case blocks <- block:
 				if !sentFirstBlock {
-					fmt.Println("sending first block")
 					select {
 					case latestBlock <- block:
 						sentFirstBlock = true

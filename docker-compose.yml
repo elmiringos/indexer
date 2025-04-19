@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  block-producer:
+  indexer-producer:
     build:
-      context: ./block-producer
+      context: ./indexer-producer
       dockerfile: Dockerfile
     environment:
-      - PG_URL=postgresql://admin:secret@db:5432/mydatabase?sslmode=disable
+      - PG_URL=postgresql://admin:secret@db:5432/indexer?sslmode=disable
       - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - REDIS_URL=redis://redis:6379
     ports:
@@ -20,7 +20,7 @@ services:
       context: ./indexer-core
       dockerfile: Dockerfile
     environment:
-      - PG_URL=postgresql://admin:secret@db:5432/mydatabase?sslmode=disable
+      - PG_URL=postgresql://admin:secret@db:5432/indexer?sslmode=disable
       - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - REDIS_URL=redis://redis:6379
     ports:
@@ -29,6 +29,22 @@ services:
       - db
       - redis
       - rabbitmq
+
+  indexer-explorer:
+    build:
+      context: ./indexer-explorer
+      dockerfile: Dockerfile
+    environment:
+      - PG_URL=postgresql://admin:secret@db:5432/indexer?sslmode=disable
+      - RMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "8083:8083"
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+      - indexer-core
 
   db:
     image: postgres:14
