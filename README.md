@@ -1,6 +1,6 @@
-# Indexer
+# Indexer – Modular EVM Blockchain Indexing System
 
-**Indexer** is a cloud-native indexing system for EVM-based blockchains. It is designed for scalability and modularity, built with gRPC support and fully deployable via Kubernetes.
+**Indexer** is a cloud-native, modular indexing system for EVM-based blockchains, built for scalability, observability, and real-time access to on-chain data. It supports both REST and gRPC APIs and is fully deployable via Kubernetes.
 
 ---
 
@@ -13,10 +13,11 @@ The system consists of the following microservices:
 - **Explorer** — provides a public API for accessing indexed data.
 
 > ⚠️ The Explorer service is still under development. Current features and status:
-- [x] Basic block data API
+- [x] Basic block data API (REST)
 - [ ] Advanced filtering
 - [ ] Transaction explorer
 - [ ] gRPC methods documentation
+- [ ] Web UI (planned)
 
 ---
 
@@ -25,15 +26,15 @@ The system consists of the following microservices:
 - **Languages:** Golang
 - **Data Layer:** PostgreSQL, Redis
 - **Messaging:** RabbitMQ
-- **API Protocol:** gRPC, HTTP REST
+- **API Protocols:** gRPC, HTTP REST
 - **Infrastructure:** Kubernetes
-- **Monitoring:** Prometheus + Grafana (Monitoring is not yet fully integrated)
+- **Monitoring:** Prometheus + Grafana *(Integration in progress – dashboards and alerts TBD)*
 
 ---
 
 ## Architecture
 
-![Alt Text](assets/indexer.jpg)
+![Architecture Overview](assets/indexer.jpg)
 
 ---
 
@@ -41,10 +42,11 @@ The system consists of the following microservices:
 
 You can deploy the Indexer stack into a Kubernetes cluster using the following steps:
 
-### 1. Apply Configuration Files
+### 1. Connect to your Kubernetes cluster
 
 ```bash
-kubectl apply -f ./k8s/configmap.yaml
+export KUBECONFIG=<path-to-your-kubeconfig>
+kubectl config use-context <your-cluster-name>
 ```
 
 ### 2. Set Required Secrets
@@ -58,6 +60,12 @@ kubectl create secret generic indexer-secrets \
 ```bash
 chmod +x ./k8s/deploy-all.sh
 ./k8s/deploy-all.sh
+```
+
+### 4. (Optional) Delete all Recources
+```bash
+chmod +x ./k8s/delete-all.sh
+./k8s/delete-all.sh
 ```
 
 This will create all necessary deployments, services, and initialize the system.
