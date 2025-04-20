@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: indexer-explorer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: indexer-explorer
+  template:
+    metadata:
+      labels:
+        app: indexer-explorer
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ['sh', '-c', 'until nc -z -v -w30 postgres 5432; do echo "Waiting for db"; sleep 2; done;']
+      containers:
+        - name: explorer
+          image: elmiringos/indexer-explorer:latest
+          ports:
+            - containerPort: 9092
+          env:
+            - name: PG_URL
+              value: "postgresql://admin:secret@postgres:5432/indexer?sslmode=disable"

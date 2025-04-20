@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: indexer-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: indexer-producer
+  template:
+    metadata:
+      labels:
+        app: indexer-producer
+    spec:
+      initContainers:
+        - name: wait-for-rabbitmq
+          image: busybox
+          command: ['sh', '-c', 'until nc -z -v -w30 rabbitmq 5672; do echo "Waiting for RabbitMQ"; sleep 2; done;']
+      containers:
+        - name: producer
+          image: elmiringos/indexer-producer:latest
+          ports:
+            - containerPort: 9091
+          env:
+            - name: RMQ_URL
+              value: "amqp://guest:guest@rabbitmq:5672/"
+            - name: CORE_SERVICE_URL
+              value: "indexer-core:9090"
+            - name: ETH_HTTP_NODE_RPC
+              valueFrom:
+                secretKeyRef:
+                  name: eth-sepolia-secrets
+                  key: ETH_HTTP_NODE_RPC
+            - name: ETH_WS_NODE_RPC
+              valueFrom:
+                secretKeyRef:
+                  name: eth-sepolia-secrets
+                  key: ETH_WS_NODE_RPC

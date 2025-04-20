@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -9,10 +10,9 @@ import (
 
 type (
 	Config struct {
-		Server `yaml:"server"`
-		HTTP   `yaml:"http"`
-		Logger `yaml:"logger"`
-		Redis
+		Server  `yaml:"server"`
+		HTTP    `yaml:"http"`
+		Logger  `yaml:"logger"`
 		EthNode `yaml:"eth_node"`
 		RMQ
 	}
@@ -24,7 +24,7 @@ type (
 		WorkerCount      int    `yaml:"worker_count"`
 		BlockStartNumber string `yaml:"block_start_number"`
 		RealTimeMode     bool   `yaml:"real_time_mode"`
-		CoreServiceUrl   string `yaml:"core_service_url"`
+		CoreServiceURL   string `env-required:"true" env:"CORE_SERVICE_URL"`
 	}
 
 	HTTP struct {
@@ -33,10 +33,6 @@ type (
 
 	Logger struct {
 		File string `env-required:"false" yaml:"file" env:"LOG_FILE"`
-	}
-
-	Redis struct {
-		URL string `env-required:"true" env:"REDIS_URL"`
 	}
 
 	RMQ struct {
@@ -55,31 +51,27 @@ type (
 func NewDefaultConfig() (*Config, error) {
 	configPath := "./config/config.yml"
 	envPath := "./.env"
-
 	return NewConfig(configPath, envPath)
 }
 
-// NewConfig returns app config.
 func NewConfig(configPath, envPath string) (*Config, error) {
 	cfg := &Config{}
 
-	// Check if the .env file exists at the provided path
 	if _, err := os.Stat(envPath); err == nil {
-		err := godotenv.Load(envPath)
-		if err != nil {
+		if err := godotenv.Load(envPath); err != nil {
 			return nil, err
 		}
 	}
 
-	err := godotenv.Load(envPath)
-	if err != nil {
+	if err := cleanenv.ReadConfig(configPath, cfg); err != nil {
 		return nil, err
 	}
 
-	err = cleanenv.ReadConfig(configPath, cfg)
-	if err != nil {
+	if err := cleanenv.ReadEnv(cfg); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("Resutl config: ", cfg)
 
 	return cfg, nil
 }

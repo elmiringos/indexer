@@ -55,7 +55,7 @@ func startProducerService(cfg *config.Config, log *zap.Logger) {
 		}
 	}()
 
-	coreClient, err := grpccoreclient.NewCoreClient(cfg.Server.CoreServiceUrl)
+	coreClient, err := grpccoreclient.NewCoreClient(cfg.Server.CoreServiceURL)
 	if err != nil {
 		log.Error("failed to create core client", zap.Error(err))
 	}

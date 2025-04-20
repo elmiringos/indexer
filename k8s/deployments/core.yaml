@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: indexer-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: indexer-core
+  template:
+    metadata:
+      labels:
+        app: indexer-core
+    spec: 
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ['sh', '-c', 'until nc -z -v -w30 postgres 5432; do echo "Waiting for db"; sleep 2; done;']
+        - name: wait-for-rabbitmq
+          image: busybox
+          command: ['sh', '-c', 'until nc -z -v -w30 rabbitmq 5672; do echo "Waiting for RabbitMQ"; sleep 2; done;']
+    
+      containers:
+        - name: core
+          image: elmiringos/indexer-core:latest
+          ports:
+            - containerPort: 9090
+          env:
+            - name: PG_URL
+              value: "postgresql://admin:secret@postgres:5432/indexer?sslmode=disable"
+            - name: RMQ_URL
+              value: "amqp://guest:guest@rabbitmq:5672/"
+            - name: REDIS_URL
+              value: "redis:6379"
