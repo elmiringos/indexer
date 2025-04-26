@@ -71,7 +71,7 @@ func NewConfig(configPath, envPath string) (*Config, error) {
 		return nil, err
 	}
 
-	fmt.Println("Resutl config: ", cfg)
+	fmt.Println("Result config: ", cfg)
 
 	return cfg, nil
 }

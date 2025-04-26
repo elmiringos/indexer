@@ -55,18 +55,22 @@ func createEncoder(stage string) (zapcore.Encoder, zapcore.Level) {
 	}
 }
 
-func createWriteSyncer(cfg *config.Config) zapcore.WriteSyncer {
-	var writeSyncers []zapcore.WriteSyncer
-
-	filename := cfg.Logger.File + time.Now().Format("2006-01-02_15-04-05") + ".log"
-
-	writeSyncers = append(writeSyncers, zapcore.AddSync(&lumberjack.Logger{
+var lumberjackLoggerFactory = func(filename string) zapcore.WriteSyncer {
+	return zapcore.AddSync(&lumberjack.Logger{
 		Filename:   filename,
 		MaxSize:    100,
 		MaxAge:     1,
 		MaxBackups: 1,
 		Compress:   true,
-	}))
+	})
+}
+
+func createWriteSyncer(cfg *config.Config) zapcore.WriteSyncer {
+	var writeSyncers []zapcore.WriteSyncer
+
+	filename := cfg.Logger.File + time.Now().Format("2006-01-02_15-04-05") + ".log"
+
+	writeSyncers = append(writeSyncers, lumberjackLoggerFactory(filename))
 
 	// Add console output by default if file output is not set
 	writeSyncers = append(writeSyncers, zapcore.AddSync(os.Stdout))
